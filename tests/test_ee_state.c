@@ -847,6 +847,7 @@ int main(void)
         assert(ps2_ee_step_arch_tlb(&cpu, &code_mem, &code_tlb) == PS2_EE_STEP_OK);
         assert(cpu.in_delay_slot == 1u);
         assert(cpu.branch_pc == UINT32_C(0x20));
+        assert(cpu.next_pc == UINT32_C(0x30)); /* branch target after the delay slot */
         cpu.gpr[4] = UINT32_C(0x8000); /* unmapped address faults in delay slot */
         assert(ps2_ee_step_arch_tlb(&cpu, &code_mem, &code_tlb) == PS2_EE_STEP_EXCEPTION);
         assert(cpu.badvaddr == UINT32_C(0x8000));

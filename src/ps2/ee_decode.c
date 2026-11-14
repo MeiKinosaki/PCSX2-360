@@ -254,7 +254,8 @@ ps2_ee_step_result_t ps2_ee_execute_memory_word_tlb(ps2_ee_state_t *s,
             exception_code = PS2_EE_EXC_MOD;
         else
             exception_code = store ? PS2_EE_EXC_TLBS : PS2_EE_EXC_TLBL;
-        ps2_ee_raise_exception(s, s->pc - UINT32_C(4), exception_code, 0);
+        ps2_ee_raise_exception_ex(s, s->pc - UINT32_C(4), exception_code, 0,
+                                  status == PS2_EE_TLB_ERR_MISS);
         return PS2_EE_STEP_EXCEPTION;
     }
     if (store) {
@@ -409,7 +410,8 @@ ps2_ee_step_result_t ps2_ee_step_arch_tlb(ps2_ee_state_t *s,
     status = ps2_ee_translate_address_arch_tlb(&lookup, s->pc, 0, &physical);
     if (status != PS2_EE_TLB_OK) {
         s->badvaddr = s->pc;
-        ps2_ee_raise_exception(s, s->pc, PS2_EE_EXC_TLBL, 0);
+        ps2_ee_raise_exception_ex(s, s->pc, PS2_EE_EXC_TLBL, 0,
+                                  status == PS2_EE_TLB_ERR_MISS);
         return PS2_EE_STEP_EXCEPTION;
     }
     if (ps2_ee_mem_load(mem, physical, 4u, &raw) != 0) {

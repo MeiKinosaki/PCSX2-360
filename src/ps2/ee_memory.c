@@ -1,5 +1,7 @@
 #include "ee_memory.h"
 
+#include <string.h>
+
 int ps2_ee_translate_address_ex(uint32_t virtual_address, uint32_t *physical_address)
 {
     uint32_t segment = virtual_address & UINT32_C(0xE0000000);

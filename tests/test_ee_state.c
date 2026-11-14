@@ -575,6 +575,42 @@ int main(void)
       assert(ps2_ee_cp0_read(&s, 4u, 0u, &value) == -2);
       assert(ps2_ee_cp0_read(&s, 14u, 1u, &value) == -1);
     }
+    /* CP0 TLB management integration: TLBWI/TLBR/TLBP/TLBWR use shared TLB. */
+    {
+      ps2_ee_state_t cp0;
+      ps2_ee_tlb_arch_t table;
+      unsigned found = 99u;
+      ps2_ee_tlb_arch_reset(&table);
+      ps2_ee_reset(&cp0);
+      cp0.cp0_index = 9u;
+      cp0.cp0_entry_hi = UINT32_C(0x00600007);
+      cp0.cp0_entry_lo0 = (UINT32_C(0x00021) << 6) | 7u;
+      cp0.cp0_entry_lo1 = (UINT32_C(0x00022) << 6) | 3u;
+      assert(ps2_ee_cp0_tlbwi(&cp0, &table) == PS2_EE_TLB_OK);
+      assert(ps2_ee_tlb_arch_probe(&table, UINT32_C(0x00600020), &found) == PS2_EE_TLB_OK);
+      assert(found == 9u);
+      cp0.cp0_index = 9u;
+      cp0.cp0_entry_hi = 0u;
+      cp0.cp0_entry_lo0 = 0u;
+      cp0.cp0_entry_lo1 = 0u;
+      assert(ps2_ee_cp0_tlbr(&cp0, &table) == PS2_EE_TLB_OK);
+      assert(cp0.cp0_entry_hi == UINT32_C(0x00600007));
+      assert(cp0.cp0_entry_lo0 == ((UINT32_C(0x00021) << 6) | 7u));
+      assert(cp0.cp0_entry_lo1 == ((UINT32_C(0x00022) << 6) | 3u));
+      cp0.cp0_entry_hi = UINT32_C(0x00600007);
+      assert(ps2_ee_cp0_tlbp(&cp0, &table) == PS2_EE_TLB_OK);
+      assert(cp0.cp0_index == 9u);
+      cp0.cp0_entry_hi = UINT32_C(0x00800007);
+      assert(ps2_ee_cp0_tlbp(&cp0, &table) == PS2_EE_TLB_ERR_MISS);
+      assert(cp0.cp0_index == UINT32_C(0x80000000));
+      cp0.cp0_wired = 46u;
+      cp0.cp0_random = 47u;
+      cp0.cp0_entry_hi = UINT32_C(0x00a00007);
+      assert(ps2_ee_cp0_tlbwr(&cp0, &table) == PS2_EE_TLB_OK);
+      assert(cp0.cp0_random == 46u);
+      cp0.cp0_page_mask = UINT32_C(0x00006000);
+      assert(ps2_ee_cp0_tlbwi(&cp0, &table) == PS2_EE_TLB_ERR_UNSUPPORTED);
+    }
     /* v0.1b: confirm the experimental table exposes all 48 R5900 TLB slots. */
     {
       ps2_ee_tlb_t tlb;

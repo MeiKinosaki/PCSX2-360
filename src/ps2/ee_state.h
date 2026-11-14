@@ -2,6 +2,7 @@
 #define PS2PALACE360_EE_STATE_H
 
 #include <stdint.h>
+#include <stddef.h>
 
 #define PS2_EE_GPR_COUNT 32u
 
@@ -54,6 +55,11 @@ void ps2_ee_raise_exception_ex(ps2_ee_state_t *state, uint32_t fault_pc,
                                uint32_t exc_code, int in_delay_slot,
                                int tlb_refill);
 void ps2_ee_reset(ps2_ee_state_t *state);
+/* Versioned in-memory snapshot for the experimental EE core (same-build ABI). */
+#define PS2_EE_SNAPSHOT_VERSION 1u
+#define PS2_EE_SNAPSHOT_MAX_SIZE (16u + sizeof(ps2_ee_state_t))
+int ps2_ee_state_save(const ps2_ee_state_t *state, uint8_t *out, size_t capacity, size_t *written);
+int ps2_ee_state_load(ps2_ee_state_t *state, const uint8_t *data, size_t size);
 /* Partial CP0 register interface: only implemented architectural registers are accepted. */
 int ps2_ee_cp0_read(const ps2_ee_state_t *state, unsigned reg, unsigned sel, uint32_t *value);
 int ps2_ee_cp0_write(ps2_ee_state_t *state, unsigned reg, unsigned sel, uint32_t value);

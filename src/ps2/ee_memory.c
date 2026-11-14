@@ -574,7 +574,6 @@ int ps2_ee_cp0_tlbp(struct ps2_ee_state *opaque_state, const ps2_ee_tlb_arch_t *
     unsigned index;
     int status;
     if (state == 0 || tlb == 0) return PS2_EE_TLB_ERR_ARGUMENT;
-    if (!cp0_tlb_page_mode_supported(state)) return PS2_EE_TLB_ERR_UNSUPPORTED;
     /* EntryHi supplies both the VPN and ASID; don't rely on a stale external ASID. */
     lookup = *tlb;
     lookup.current_asid = (uint8_t)(state->cp0_entry_hi & UINT32_C(0xff));

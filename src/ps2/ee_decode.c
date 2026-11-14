@@ -165,51 +165,76 @@ ps2_ee_step_result_t ps2_ee_step(ps2_ee_state_t *s, ps2_ee_memory_t *mem)
     return result;
 }
 
-/* V2.0.19b: execute scalar load/store instructions through the experimental
- * direct-map/TLB memory path. Translation faults are surfaced as INVALID for
- * now; architectural CP0/TLB exception delivery remains future work. */
+/* V2.0.24b: route scalar data faults into the prototype CP0 exception path.
+ * The caller advances PC before execution, so pc-4 identifies this instruction. */
 ps2_ee_step_result_t ps2_ee_execute_memory_word_tlb(ps2_ee_state_t *s,
                                                      ps2_ee_memory_t *mem,
                                                      const ps2_ee_tlb_t *tlb,
                                                      uint32_t insn)
 {
     unsigned op, rs, rt, width = 0;
-    uint32_t address;
+    uint32_t address, physical = 0;
     uint64_t value;
     int store = 0, sign_extend = 0, status;
+    uint32_t exception_code;
     if (s == NULL || mem == NULL || tlb == NULL) return PS2_EE_STEP_INVALID;
     op = insn >> 26;
     rs = (insn >> 21) & 31u;
     rt = (insn >> 16) & 31u;
     switch (op) {
-    case 0x20: width = 1; sign_extend = 1; break; /* LB */
-    case 0x24: width = 1; break;                 /* LBU */
-    case 0x21: width = 2; sign_extend = 1; break; /* LH */
-    case 0x25: width = 2; break;                 /* LHU */
-    case 0x23: width = 4; sign_extend = 1; break; /* LW */
-    case 0x27: width = 4; break;                 /* LWU */
-    case 0x37: width = 8; break;                 /* LD */
-    case 0x28: width = 1; store = 1; break;       /* SB */
-    case 0x29: width = 2; store = 1; break;       /* SH */
-    case 0x2b: width = 4; store = 1; break;       /* SW */
-    case 0x3f: width = 8; store = 1; break;       /* SD */
+    case 0x20: width = 1; sign_extend = 1; break;
+    case 0x24: width = 1; break;
+    case 0x21: width = 2; sign_extend = 1; break;
+    case 0x25: width = 2; break;
+    case 0x23: width = 4; sign_extend = 1; break;
+    case 0x27: width = 4; break;
+    case 0x37: width = 8; break;
+    case 0x28: width = 1; store = 1; break;
+    case 0x29: width = 2; store = 1; break;
+    case 0x2b: width = 4; store = 1; break;
+    case 0x3f: width = 8; store = 1; break;
     default: return ps2_ee_execute_word(s, insn);
     }
     address = (uint32_t)s->gpr[rs] + (uint32_t)(int32_t)(int16_t)insn;
+    if ((address & (uint32_t)(width - 1u)) != 0u) {
+        s->badvaddr = address;
+        ps2_ee_raise_exception(s, s->pc - UINT32_C(4),
+                               store ? PS2_EE_EXC_ADES : PS2_EE_EXC_ADEL, 0);
+        return PS2_EE_STEP_EXCEPTION;
+    }
+    status = ps2_ee_translate_address_with_tlb(tlb, address, store, &physical);
+    if (status != PS2_EE_TLB_OK) {
+        if (status == PS2_EE_TLB_ERR_MULTIPLE) return PS2_EE_STEP_INVALID;
+        s->badvaddr = address;
+        if (status == PS2_EE_TLB_ERR_MODIFIED)
+            exception_code = PS2_EE_EXC_MOD;
+        else
+            exception_code = store ? PS2_EE_EXC_TLBS : PS2_EE_EXC_TLBL;
+        ps2_ee_raise_exception(s, s->pc - UINT32_C(4), exception_code, 0);
+        return PS2_EE_STEP_EXCEPTION;
+    }
     if (store) {
-        status = ps2_ee_mem_store_virtual_tlb(mem, tlb, address, width, s->gpr[rt]);
-        if (status != PS2_EE_MEM_OK) return PS2_EE_STEP_INVALID;
+        status = ps2_ee_mem_store(mem, physical, width, s->gpr[rt]);
+        if (status != 0) {
+            s->badvaddr = address;
+            ps2_ee_raise_exception(s, s->pc - UINT32_C(4), PS2_EE_EXC_DBE, 0);
+            return PS2_EE_STEP_EXCEPTION;
+        }
     } else {
-        status = ps2_ee_mem_load_virtual_tlb(mem, tlb, address, width, &value);
-        if (status != PS2_EE_MEM_OK) return PS2_EE_STEP_INVALID;
+        status = ps2_ee_mem_load(mem, physical, width, &value);
+        if (status != 0) {
+            s->badvaddr = address;
+            ps2_ee_raise_exception(s, s->pc - UINT32_C(4), PS2_EE_EXC_DBE, 0);
+            return PS2_EE_STEP_EXCEPTION;
+        }
         if (sign_extend && width < 8u) {
             unsigned bits = width * 8u;
             uint64_t sign = UINT64_C(1) << (bits - 1u);
             if ((value & sign) != 0u) value |= UINT64_MAX << bits;
         }
         if (rt != 0u) s->gpr[rt] = value;
-        s->gpr[0] = 0;
     }
+    s->gpr[0] = 0;
     return PS2_EE_STEP_OK;
 }
 
@@ -223,7 +248,7 @@ ps2_ee_step_result_t ps2_ee_step_tlb(ps2_ee_state_t *s, ps2_ee_memory_t *mem,
     int status;
     ps2_ee_step_result_t result;
     if (s == NULL || mem == NULL || tlb == NULL) return PS2_EE_STEP_INVALID;
-    status = ps2_ee_tlb_translate(tlb, s->pc, 0, &physical);
+    status = ps2_ee_translate_address_with_tlb(tlb, s->pc, 0, &physical);
     if (status != PS2_EE_TLB_OK) {
         s->badvaddr = s->pc;
         ps2_ee_raise_exception(s, s->pc, PS2_EE_EXC_TLBL, 0);

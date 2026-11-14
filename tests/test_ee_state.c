@@ -12,6 +12,23 @@ int main(void)
 {
     ps2_ee_state_t s; uint8_t ram[64]={0}; ps2_ee_memory_t mem={ram,sizeof ram}; uint64_t loaded=0;
     ps2_ee_reset(&s); assert(s.pc==UINT32_C(0xBFC00000)&&s.next_pc==UINT32_C(0xBFC00004)); assert(s.gpr[0]==0);
+    /* R5900 TLB refill exceptions use the refill vector, while ADEL uses
+       the general vector. BEV selects the bootstrap vector base. */
+    {
+        ps2_ee_state_t ex;
+        ps2_ee_reset(&ex);
+        ps2_ee_raise_exception(&ex, UINT32_C(0x4000), PS2_EE_EXC_TLBL, 0);
+        assert(ex.pc == UINT32_C(0x80000000));
+        assert(ex.next_pc == UINT32_C(0x80000004));
+        ps2_ee_reset(&ex);
+        ps2_ee_raise_exception(&ex, UINT32_C(0x4000), PS2_EE_EXC_ADEL, 0);
+        assert(ex.pc == UINT32_C(0x80000180));
+        ps2_ee_reset(&ex);
+        ex.status = UINT32_C(0x00400000);
+        ps2_ee_raise_exception(&ex, UINT32_C(0x4000), PS2_EE_EXC_TLBS, 0);
+        assert(ex.pc == UINT32_C(0xBFC00200));
+    }
+
     /* Reverse-engineered MIPS exception rule: a delay-slot fault records
        the branch PC in EPC and sets Cause.BD; EXL preserves EPC/Cause. */
     {

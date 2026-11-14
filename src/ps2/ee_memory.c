@@ -112,6 +112,7 @@ void ps2_ee_tlb_reset(ps2_ee_tlb_t *tlb)
         tlb->entries[i].valid = 0;
         tlb->entries[i].dirty = 0;
         tlb->entries[i].global = 0;
+        tlb->entries[i].present = 0;
     }
 }
 
@@ -131,6 +132,7 @@ int ps2_ee_tlb_write(ps2_ee_tlb_t *tlb, unsigned index,
     e->valid = valid_entry != 0;
     e->dirty = dirty != 0;
     e->global = global != 0;
+    e->present = 1;
     return PS2_EE_TLB_OK;
 }
 
@@ -154,6 +156,30 @@ int ps2_ee_tlb_lookup(const ps2_ee_tlb_t *tlb, uint32_t virtual_address,
     if (matches > 1u) return PS2_EE_TLB_ERR_MULTIPLE;
     if (matches == 0u) return PS2_EE_TLB_ERR_MISS;
     *entry = *match;
+    return PS2_EE_TLB_OK;
+}
+
+/* TLBP-like search over programmed slots. The valid/dirty permission
+ * bits do not participate in tag matching; a programmed invalid mapping
+ * is still discoverable by the probe operation. */
+int ps2_ee_tlb_probe(const ps2_ee_tlb_t *tlb, uint32_t virtual_address,
+                     unsigned *index)
+{
+    uint32_t page;
+    unsigned i, matches = 0, found = 0;
+    if (tlb == 0 || index == 0) return PS2_EE_TLB_ERR_ARGUMENT;
+    page = virtual_address & ~(uint32_t)(PS2_EE_TLB_PAGE_SIZE - 1u);
+    for (i = 0; i < PS2_EE_TLB_ENTRY_COUNT; ++i) {
+        const ps2_ee_tlb_entry_t *e = &tlb->entries[i];
+        if (!e->present || e->virtual_page != page ||
+            (!e->global && e->asid != tlb->current_asid))
+            continue;
+        found = i;
+        ++matches;
+    }
+    if (matches > 1u) return PS2_EE_TLB_ERR_MULTIPLE;
+    if (matches == 0u) return PS2_EE_TLB_ERR_MISS;
+    *index = found;
     return PS2_EE_TLB_OK;
 }
 
@@ -182,7 +208,7 @@ int ps2_ee_tlb_translate(const ps2_ee_tlb_t *tlb, uint32_t virtual_address,
          * invalid entry exists and no valid mapping supersedes it. */
         for (i = 0; i < PS2_EE_TLB_ENTRY_COUNT; ++i) {
             const ps2_ee_tlb_entry_t *e = &tlb->entries[i];
-            if (e->virtual_page == page &&
+            if (e->present && e->virtual_page == page &&
                 (e->global || e->asid == tlb->current_asid))
                 return PS2_EE_TLB_ERR_INVALID;
         }
@@ -285,7 +311,7 @@ int ps2_ee_tlb_check_page(const ps2_ee_tlb_t *tlb, uint32_t virtual_address,
          * Full invalidation clears metadata, so flushed slots won't match. */
         for (i = 0; i < PS2_EE_TLB_ENTRY_COUNT; ++i) {
             const ps2_ee_tlb_entry_t *e = &tlb->entries[i];
-            if (!e->valid && e->virtual_page == page &&
+            if (e->present && !e->valid && e->virtual_page == page &&
                 (e->global || e->asid == tlb->current_asid))
                 return PS2_EE_TLB_ERR_INVALID;
         }
@@ -323,6 +349,7 @@ int ps2_ee_tlb_invalidate_all(ps2_ee_tlb_t *tlb)
         tlb->entries[i].valid = 0;
         tlb->entries[i].dirty = 0;
         tlb->entries[i].global = 0;
+        tlb->entries[i].present = 0;
     }
     return PS2_EE_TLB_OK;
 }

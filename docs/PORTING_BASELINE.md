@@ -69,3 +69,12 @@ O histórico do PS2Palace360 registra regressão host aprovada para EE/timer/DMA
 - XEX gerado ≠ XEX inicializado no console.
 - XEX inicializado ≠ jogo PS2 compatível.
 - A versão só avança quando o escopo daquela versão estiver concluído e as evidências forem registradas.
+
+
+## Atualização após a primeira integração no PCSX2-360
+
+Em 14/11/2026 foram importados para `src/ps2/` os módulos EE `ee_state`, `ee_ops`, `ee_immediate`, `ee_compare`, `ee_decode` e `ee_memory`, além de `tests/test_ee_state.c`. O aviso de licença MIT da base PS2Palace360 foi preservado em `LICENSES/PS2Palace360-MIT.txt`.
+
+Foi criado um `Makefile` com validação host e alvo `make xex`. O artefato de entrega é exclusivamente `build/default.xex`; um ELF intermediário temporário é removido após a conversão. O workflow `.github/workflows/build.yml` executa validação host no GitHub-hosted runner e reserva a compilação Xenon para runner self-hosted com libXenon/`elf2xex` configurados.
+
+A importação ainda não foi validada por CI neste repositório e nenhum `default.xex` foi gerado. `src/main.c` é somente um bootstrap experimental; não implementa inicialização do Xbox 360 nem boot de jogos PS2.

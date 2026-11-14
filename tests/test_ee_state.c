@@ -641,7 +641,7 @@ int main(void)
       assert(ps2_ee_cp0_read(&s, 6u, 0u, &value) == 0 && value == 12u);
       assert(ps2_ee_cp0_read(&s, 1u, 1u, &value) == -1);
       assert(ps2_ee_cp0_write(&s, 8u, 0u, UINT32_C(0x1234)) == -3);
-      assert(ps2_ee_cp0_read(&s, 4u, 0u, &value) == -2);
+      assert(ps2_ee_cp0_read(&s, 4u, 0u, &value) == 0);
       assert(ps2_ee_cp0_read(&s, 14u, 1u, &value) == -1);
     }
     /* CP0 TLB management integration: TLBWI/TLBR/TLBP/TLBWR use shared TLB. */

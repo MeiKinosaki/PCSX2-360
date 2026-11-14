@@ -114,7 +114,7 @@ int ps2_ee_mem_load_virtual_ex(ps2_ee_memory_t *mem, uint32_t virtual_address,
 int ps2_ee_mem_store_virtual_ex(ps2_ee_memory_t *mem, uint32_t virtual_address,
                                 unsigned width, uint64_t value);
 /* Architectural-shape TLB model: 48 entries, each mapping an even/odd
- * 4 KiB page pair through EntryHi and EntryLo0/1. PageMask is fixed at 4 KiB. */
+ * variable-size page pair through EntryHi, EntryLo0/1 and supported PageMask values. */
 typedef struct ps2_ee_tlb_half {
     uint32_t physical_page;
     uint8_t valid;
@@ -166,8 +166,8 @@ int ps2_ee_mem_store_virtual_arch_tlb(ps2_ee_memory_t *mem,
                                       uint32_t virtual_address, unsigned width,
                                       uint64_t value);
 
-/* CP0/TLB management operations. PageMask is currently restricted to 4 KiB
- * pages (zero); nonzero masks return ERR_UNSUPPORTED without mutating state. */
+/* CP0/TLB management operations share the 48-entry paired-page TLB.
+ * Unsupported PageMask encodings are rejected without changing an entry. */
 int ps2_ee_cp0_tlbwi(struct ps2_ee_state *state, ps2_ee_tlb_arch_t *tlb);
 int ps2_ee_cp0_tlbwr(struct ps2_ee_state *state, ps2_ee_tlb_arch_t *tlb);
 int ps2_ee_cp0_tlbr(struct ps2_ee_state *state, const ps2_ee_tlb_arch_t *tlb);

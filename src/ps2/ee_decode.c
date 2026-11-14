@@ -388,7 +388,7 @@ ps2_ee_step_result_t ps2_ee_execute_memory_word_arch_tlb(
 
 ps2_ee_step_result_t ps2_ee_step_arch_tlb(ps2_ee_state_t *s,
                                            ps2_ee_memory_t *mem,
-                                           const ps2_ee_tlb_arch_t *tlb)
+                                           ps2_ee_tlb_arch_t *tlb)
 {
     uint64_t raw;
     uint32_t physical;

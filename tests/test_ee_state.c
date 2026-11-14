@@ -20,7 +20,8 @@ int main(void)
         ps2_ee_reset(&ex);
         ex.cp0_context = UINT32_C(0xabc00000);
         ex.cp0_entry_hi = UINT32_C(0x0000005a);
-        ps2_ee_raise_exception(&ex, UINT32_C(0x12345678), PS2_EE_EXC_TLBL, 0);
+        ex.badvaddr = UINT32_C(0x12345678);
+        ps2_ee_raise_exception(&ex, UINT32_C(0x1000), PS2_EE_EXC_TLBL, 0);
         assert(ex.badvaddr == UINT32_C(0x12345678));
         assert((ex.cp0_context & UINT32_C(0xff800000)) == UINT32_C(0xabc00000));
         assert((ex.cp0_context & UINT32_C(0x007ffff0)) ==
@@ -30,6 +31,10 @@ int main(void)
                (UINT32_C(0x12345678) & UINT32_C(0xffffe000)));
         assert(ps2_ee_cp0_read(&ex, 4u, 0u, &cp0_value) == 0);
         assert(cp0_value == ex.cp0_context);
+        assert(ps2_ee_cp0_write(&ex, 4u, 0u, UINT32_C(0x55000000)) == 0);
+        assert((ex.cp0_context & UINT32_C(0xff800000)) == UINT32_C(0x55000000));
+        assert((ex.cp0_context & UINT32_C(0x007ffff0)) ==
+               ((UINT32_C(0x12345678) >> 9) & UINT32_C(0x007ffff0)));
     }
 
     /* R5900 TLB refill exceptions use the refill vector, while ADEL uses

@@ -97,6 +97,32 @@ int main(void)
         assert(pcsx2_game_library_load(&restored, snapshot, written) == -6);
         assert(restored.count == library.count);
         assert(pcsx2_game_library_save(&library, snapshot, 1u, &written) == -2);
+
+        /* Failed saves must not leak a partial snapshot or stale byte count. */
+        {
+            pcsx2_game_library_t invalid = library;
+            uint8_t untouched[32];
+            uint8_t expected[32];
+            memset(untouched, 0xa5, sizeof(untouched));
+            memcpy(expected, untouched, sizeof(expected));
+            invalid.entries[0].favorite = 2u;
+            written = 99u;
+            assert(pcsx2_game_library_save(&invalid, untouched,
+                                          sizeof(untouched), &written) == -3);
+            assert(written == 0u);
+            assert(memcmp(untouched, expected, sizeof(untouched)) == 0);
+        }
+        {
+            pcsx2_game_library_t invalid = library;
+            invalid.entries[1].serial[0] = invalid.entries[0].serial[0];
+            memcpy(invalid.entries[1].serial + 1u,
+                   invalid.entries[0].serial + 1u,
+                   sizeof(invalid.entries[1].serial) - 1u);
+            written = 99u;
+            assert(pcsx2_game_library_save(&invalid, snapshot,
+                                          sizeof(snapshot), &written) == -4);
+            assert(written == 0u);
+        }
     }
 
     puts("OK: game library add, duplicate protection, favorites, filters, bounds and persistence.");

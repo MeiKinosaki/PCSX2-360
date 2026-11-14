@@ -31,7 +31,8 @@ typedef struct ps2_ee_state {
     uint32_t cause;
     uint32_t status;
     uint32_t epc;
-    uint32_t badvaddr; /* Experimental CP0.BadVAddr shadow for TLB/address faults. */
+    uint32_t badvaddr; /* CP0.BadVAddr shadow for TLB/address faults. */
+    uint32_t cp0_context; /* CP0.Context: PTEBase plus BadVPN2. */
     /* CP0 TLB-management registers used by the stateful COP0/TLB execution path. */
     uint32_t cp0_index;
     uint32_t cp0_random;

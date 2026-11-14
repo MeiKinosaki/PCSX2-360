@@ -516,7 +516,13 @@ int main(void)
       ps2_ee_tlb_arch_reset(&tlb);
       tlb.current_asid = 5u;
       assert(ps2_ee_tlb_arch_probe(&tlb, UINT32_C(0x00400020), &index) == PS2_EE_TLB_ERR_MISS);
+      uint32_t read_hi = 0, read_lo0 = 0, read_lo1 = 0;
       assert(ps2_ee_tlb_arch_write_indexed(&tlb, 47u, hi, lo0, lo1) == PS2_EE_TLB_OK);
+      assert(ps2_ee_tlb_arch_read_indexed(&tlb, 47u, &read_hi, &read_lo0, &read_lo1) == PS2_EE_TLB_OK);
+      assert(read_hi == hi);
+      assert(read_lo0 == lo0);
+      assert(read_lo1 == lo1);
+      assert(ps2_ee_tlb_arch_read_indexed(&tlb, 46u, &read_hi, &read_lo0, &read_lo1) == PS2_EE_TLB_ERR_MISS);
       assert(ps2_ee_tlb_arch_probe(&tlb, UINT32_C(0x00400020), &index) == PS2_EE_TLB_OK);
       assert(index == 47u);
       assert(ps2_ee_tlb_arch_translate(&tlb, UINT32_C(0x00400020), 0, &physical) == PS2_EE_TLB_OK);

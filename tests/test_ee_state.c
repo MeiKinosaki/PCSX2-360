@@ -609,6 +609,7 @@ int main(void)
       assert(ps2_ee_cp0_tlbwr(&cp0, &table) == PS2_EE_TLB_OK);
       assert(cp0.cp0_random == 46u);
       uint32_t physical = 0u;
+      table.current_asid = 7u;
       cp0.cp0_page_mask = UINT32_C(0x00006000);
       cp0.cp0_index = 10u;
       cp0.cp0_entry_hi = UINT32_C(0x00a00007);
@@ -622,7 +623,7 @@ int main(void)
       assert(ps2_ee_tlb_arch_translate(&table, UINT32_C(0x00a01234), 0, &physical) == PS2_EE_TLB_OK);
       assert(physical == UINT32_C(0x00021234));
       assert(ps2_ee_tlb_arch_translate(&table, UINT32_C(0x00a04567), 0, &physical) == PS2_EE_TLB_OK);
-      assert(physical == UINT32_C(0x00024567));
+      assert(physical == UINT32_C(0x00020567));
       assert(ps2_ee_tlb_arch_write_indexed_masked(&table, 11u, UINT32_C(0x00c00007),
           cp0.cp0_entry_lo0, cp0.cp0_entry_lo1, UINT32_C(0x00004000)) == PS2_EE_TLB_ERR_UNSUPPORTED);
     }

@@ -512,7 +512,7 @@ int main(void)
       uint32_t physical = UINT32_C(0xdeadbeef);
       uint32_t hi = UINT32_C(0x00400005); /* VPN2 + ASID 5 */
       uint32_t lo0 = (UINT32_C(0x00012) << 6) | 0x7u; /* PFN, D, V, G */
-      uint32_t lo1 = (UINT32_C(0x00034) << 6) | 0x3u; /* PFN, V, G; read-only */
+      uint32_t lo1 = (UINT32_C(0x00034) << 6) | 0x2u; /* PFN, V; read-only, non-global */
       ps2_ee_tlb_arch_reset(&tlb);
       assert(ps2_ee_tlb_arch_probe(&tlb, UINT32_C(0x00400020), &index) == PS2_EE_TLB_ERR_MISS);
       assert(ps2_ee_tlb_arch_write_indexed(&tlb, 47u, hi, lo0, lo1) == PS2_EE_TLB_OK);

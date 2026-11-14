@@ -426,15 +426,17 @@ int main(void)
       /* A zeroed slot is not a programmed invalid mapping. */
       assert(ps2_ee_tlb_probe(&tlb, 0u, &index) == PS2_EE_TLB_ERR_MISS);
       assert(index == 99u);
+      assert(ps2_ee_tlb_set_asid(&tlb, 1u) == PS2_EE_TLB_OK);
       assert(ps2_ee_tlb_write(&tlb, 17u, UINT32_C(0x00000000),
-          UINT32_C(0x00004000), 0u, 0, 0, 0) == PS2_EE_TLB_OK);
+          UINT32_C(0x00004000), 1u, 0, 0, 0) == PS2_EE_TLB_OK);
       /* TLBP matches the tag even though the translation is invalid. */
       assert(ps2_ee_tlb_probe(&tlb, UINT32_C(0x00000034), &index) == PS2_EE_TLB_OK);
       assert(index == 17u);
       assert(ps2_ee_tlb_translate(&tlb, UINT32_C(0x00000034), 0,
           &(uint32_t){0}) == PS2_EE_TLB_ERR_INVALID);
-      assert(ps2_ee_tlb_set_asid(&tlb, 1u) == PS2_EE_TLB_OK);
+      assert(ps2_ee_tlb_set_asid(&tlb, 2u) == PS2_EE_TLB_OK);
       assert(ps2_ee_tlb_probe(&tlb, UINT32_C(0x00000034), &index) == PS2_EE_TLB_ERR_MISS);
+      assert(ps2_ee_tlb_set_asid(&tlb, 1u) == PS2_EE_TLB_OK);
       assert(ps2_ee_tlb_write(&tlb, 18u, 0u, UINT32_C(0x00005000),
           1u, 1, 1, 0) == PS2_EE_TLB_OK);
       assert(ps2_ee_tlb_probe(&tlb, UINT32_C(0x00000034), &index) == PS2_EE_TLB_ERR_MULTIPLE);

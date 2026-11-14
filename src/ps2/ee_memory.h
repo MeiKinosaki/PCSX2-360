@@ -155,6 +155,9 @@ int ps2_ee_tlb_arch_probe(const ps2_ee_tlb_arch_t *tlb,
 int ps2_ee_tlb_arch_translate(const ps2_ee_tlb_arch_t *tlb,
                               uint32_t virtual_address, int is_write,
                               uint32_t *physical_address);
+int ps2_ee_translate_address_arch_tlb(const ps2_ee_tlb_arch_t *tlb,
+                                      uint32_t virtual_address, int is_write,
+                                      uint32_t *physical_address);
 
 /* Experimental virtual memory accessors backed by the 48-entry paired-page TLB. */
 int ps2_ee_mem_load_virtual_arch_tlb(ps2_ee_memory_t *mem,

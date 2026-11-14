@@ -30,7 +30,14 @@ typedef struct pcsx2_game_filter {
     int favorites_only;
 } pcsx2_game_filter_t;
 
+#define PCSX2_GAME_LIBRARY_SNAPSHOT_VERSION 1u
+
 void pcsx2_game_library_init(pcsx2_game_library_t *library);
+size_t pcsx2_game_library_snapshot_size(void);
+int pcsx2_game_library_save(const pcsx2_game_library_t *library,
+                            uint8_t *out, size_t capacity, size_t *written);
+int pcsx2_game_library_load(pcsx2_game_library_t *library,
+                            const uint8_t *data, size_t size);
 int pcsx2_game_library_add(pcsx2_game_library_t *library,
                            const pcsx2_game_entry_t *entry);
 int pcsx2_game_library_set_favorite(pcsx2_game_library_t *library,

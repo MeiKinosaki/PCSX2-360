@@ -630,12 +630,9 @@ int main(void)
       /* Accept the standard contiguous PageMask encodings through 16 MiB pages. */
       {
         static const uint32_t valid_masks[] = {
-          0u, UINT32_C(0x00002000), UINT32_C(0x00006000),
-          UINT32_C(0x0000e000), UINT32_C(0x0001e000),
-          UINT32_C(0x0003e000), UINT32_C(0x0007e000),
-          UINT32_C(0x000fe000), UINT32_C(0x001fe000),
-          UINT32_C(0x003fe000), UINT32_C(0x007fe000),
-          UINT32_C(0x00ffe000), UINT32_C(0x01ffe000)
+          0u, UINT32_C(0x00006000), UINT32_C(0x0001e000),
+          UINT32_C(0x0007e000), UINT32_C(0x001fe000),
+          UINT32_C(0x007fe000), UINT32_C(0x01ffe000)
         };
         unsigned n;
         for (n = 0; n < sizeof(valid_masks) / sizeof(valid_masks[0]); ++n)
@@ -646,7 +643,7 @@ int main(void)
       /* Malformed masks and invalid arguments have distinct error classes. */
       assert(ps2_ee_tlb_arch_write_indexed_masked(&table, 11u,
           UINT32_C(0x00c00007), cp0.cp0_entry_lo0, cp0.cp0_entry_lo1,
-          UINT32_C(0x0000a000)) == PS2_EE_TLB_ERR_UNSUPPORTED);
+          UINT32_C(0x0000e000)) == PS2_EE_TLB_ERR_UNSUPPORTED);
       assert(ps2_ee_tlb_arch_write_indexed_masked(&table, 48u,
           UINT32_C(0x00c00007), cp0.cp0_entry_lo0, cp0.cp0_entry_lo1, 0u)
           == PS2_EE_TLB_ERR_ARGUMENT);

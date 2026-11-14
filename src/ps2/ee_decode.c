@@ -100,10 +100,10 @@ ps2_ee_step_result_t ps2_ee_execute_word(ps2_ee_state_t *s, uint32_t insn)
         } break;
     case 0x02: s->next_pc=(s->pc&UINT32_C(0xf0000000))|((insn&UINT32_C(0x03ffffff))<<2); break;
     case 0x03: s->gpr[31]=(uint32_t)(s->pc+4u); s->next_pc=(s->pc&UINT32_C(0xf0000000))|((insn&UINT32_C(0x03ffffff))<<2); break;
-    case 0x04: if ((uint32_t)a == (uint32_t)b) s->next_pc = s->pc + UINT32_C(4) + (uint32_t)((int32_t)imm * 4); break;
-    case 0x05: if ((uint32_t)a != (uint32_t)b) s->next_pc = s->pc + UINT32_C(4) + (uint32_t)((int32_t)imm * 4); break;
-    case 0x06: if ((int64_t)a <= 0) s->next_pc = s->pc + UINT32_C(4) + (uint32_t)((int32_t)imm * 4); break;
-    case 0x07: if ((int64_t)a > 0) s->next_pc = s->pc + UINT32_C(4) + (uint32_t)((int32_t)imm * 4); break;
+    case 0x04: if ((uint32_t)a == (uint32_t)b) s->next_pc = s->pc + (uint32_t)((int32_t)imm * 4); break;
+    case 0x05: if ((uint32_t)a != (uint32_t)b) s->next_pc = s->pc + (uint32_t)((int32_t)imm * 4); break;
+    case 0x06: if ((int64_t)a <= 0) s->next_pc = s->pc + (uint32_t)((int32_t)imm * 4); break;
+    case 0x07: if ((int64_t)a > 0) s->next_pc = s->pc + (uint32_t)((int32_t)imm * 4); break;
     case 0x08: rc=ps2_ee_addi32(s,rt,rs,imm); if(rc==1){ps2_ee_raise_exception(s,s->pc-UINT32_C(4),12u,0);return PS2_EE_STEP_EXCEPTION;} goto done;
     case 0x09: rc=ps2_ee_addiu32(s,rt,rs,imm); goto done;
     case 0x0a: rc=ps2_ee_slti64(s,rt,rs,imm); goto done;
@@ -191,20 +191,11 @@ ps2_ee_step_result_t ps2_ee_step(ps2_ee_state_t *s, ps2_ee_memory_t *mem)
         return PS2_EE_STEP_INVALID;
     instruction = (uint32_t)raw;
 
-    /* Advance into the delay slot before executing the current instruction.
-     * Branch decoding uses the architectural PC+4 base, so temporarily expose
-     * the branch instruction PC while calculating its target. The visible PC
-     * is restored to the delay-slot address before returning. */
+    /* Execute with PC exposing instruction_pc+4. Branch immediates are
+     * therefore added directly to PC, matching the architectural PC+4 base. */
     s->pc = s->next_pc;
     s->next_pc += 4u;
-    if ((instruction >> 26) >= 0x04u && (instruction >> 26) <= 0x07u) {
-        uint32_t delay_pc = s->pc;
-        s->pc = instruction_pc;
-        result = ps2_ee_execute_memory_word(s, mem, instruction);
-        if (result == PS2_EE_STEP_OK) s->pc = delay_pc;
-    } else {
-        result = ps2_ee_execute_memory_word(s, mem, instruction);
-    }
+    result = ps2_ee_execute_memory_word(s, mem, instruction);
     s->gpr[0] = 0;
     return result;
 }

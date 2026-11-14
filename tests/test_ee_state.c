@@ -645,5 +645,29 @@ int main(void)
       assert(ps2_ee_tlb_translate(&tlb, UINT32_C(0x00ABC123), 0, &physical) == PS2_EE_TLB_OK);
       assert(physical == UINT32_C(0x00012123));
     }
+    /* Paired-page architectural TLB now feeds the EE RAM accessors. */
+    {
+      uint8_t mapped_ram[UINT32_C(0x4000)] = {0};
+      ps2_ee_memory_t mapped_mem = {mapped_ram, sizeof(mapped_ram)};
+      ps2_ee_tlb_arch_t mapped_tlb;
+      uint64_t value = 0;
+      ps2_ee_tlb_arch_reset(&mapped_tlb);
+      mapped_tlb.current_asid = 3u;
+      assert(ps2_ee_tlb_arch_write_indexed(&mapped_tlb, 0u,
+          UINT32_C(0x00400003), (UINT32_C(1) << 6) | 7u,
+          (UINT32_C(2) << 6) | 7u) == PS2_EE_TLB_OK);
+      assert(ps2_ee_mem_store_virtual_arch_tlb(&mapped_mem, &mapped_tlb,
+          UINT32_C(0x00400024), 4u, UINT32_C(0x12345678)) == PS2_EE_MEM_OK);
+      assert(ps2_ee_mem_load_virtual_arch_tlb(&mapped_mem, &mapped_tlb,
+          UINT32_C(0x00400024), 4u, &value) == PS2_EE_MEM_OK);
+      assert(value == UINT32_C(0x12345678));
+      assert(ps2_ee_mem_load_virtual_arch_tlb(&mapped_mem, &mapped_tlb,
+          UINT32_C(0x00800024), 4u, &value) == PS2_EE_MEM_ERR_TRANSLATION);
+      assert(ps2_ee_mem_store_virtual_arch_tlb(&mapped_mem, &mapped_tlb,
+          UINT32_C(0x00401024), 4u, UINT32_C(0xabcdef01)) == PS2_EE_MEM_OK);
+      assert(ps2_ee_mem_load_virtual_arch_tlb(&mapped_mem, &mapped_tlb,
+          UINT32_C(0x00401024), 4u, &value) == PS2_EE_MEM_OK);
+      assert(value == UINT32_C(0xabcdef01));
+    }
     puts("OK: EE helpers, decoder, TLB-backed step, scalar memory ops and arithmetic tests.");return 0;
 }

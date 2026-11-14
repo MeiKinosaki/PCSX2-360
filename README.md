@@ -4,7 +4,7 @@ Projeto experimental de emulação de PlayStation 2 para Xbox 360 RGH/JTAG.
 
 **Versão de desenvolvimento: v0.2b — em andamento.**
 
-**Progresso global estimado: 20%.** Marco v0.2b: integração experimental das operações COP0/TLB ao despachante EE, PageMask variável validado por testes host e regressão aprovada no commit `933a44c`.
+**Progresso global estimado: 21%.** Marco atual: além da integração experimental COP0/TLB e PageMask variável, o estado EE agora inclui CP0.Context e atualização de BadVAddr/Context.BadVPN2/EntryHi.VPN2 nas exceções TLB. Os novos testes dessas alterações aguardam execução no CI; portanto, este avanço ainda não está validado por regressão.
 
 
 ## Objetivo do build
@@ -27,6 +27,7 @@ O executável final obrigatório é **`build/default.xex`**. O arquivo ELF, quan
 - [x] Modelo arquitetural experimental separado com 48 pares de páginas de 4 KiB (EntryHi, EntryLo0/1, ASID, V, D e G).
 - [x] Operações COP0/TLB experimentais ligadas ao despachante arquitetural: TLBP, TLBR, TLBWI e TLBWR.
 - [x] PageMask variável com sete codificações de tamanho de página aceitas pela implementação experimental e máscaras inválidas rejeitadas.
+- [x] Estado CP0.Context (registrador 4), leitura/escrita parcial e atualização dos campos BadVPN2/VPN2 em falhas TLB; testes adicionados, aguardando validação no CI.
 - [x] Testes host para TLB pareada, ASID, permissões, busca sem correspondência, round-trip CP0/TLB, TLBWR e PageMask.
 - [x] Regressão host `make check` aprovada no CI do commit `933a44c` (run `43626390249`).
 - [ ] Auditoria diferencial completa da semântica R5900, incluindo PageMask, PFN, delay slots e exceções.

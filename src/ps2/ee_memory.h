@@ -124,6 +124,7 @@ typedef struct ps2_ee_tlb_half {
 
 typedef struct ps2_ee_tlb_pair_entry {
     uint32_t vpn2;
+    uint32_t page_mask;
     uint8_t asid;
     uint8_t global;
     uint8_t present;
@@ -140,9 +141,15 @@ void ps2_ee_tlb_arch_reset(ps2_ee_tlb_arch_t *tlb);
 int ps2_ee_tlb_arch_write_indexed(ps2_ee_tlb_arch_t *tlb, unsigned index,
                                   uint32_t entry_hi, uint32_t entry_lo0,
                                   uint32_t entry_lo1);
+int ps2_ee_tlb_arch_write_indexed_masked(ps2_ee_tlb_arch_t *tlb, unsigned index,
+                                         uint32_t entry_hi, uint32_t entry_lo0,
+                                         uint32_t entry_lo1, uint32_t page_mask);
 int ps2_ee_tlb_arch_read_indexed(const ps2_ee_tlb_arch_t *tlb, unsigned index,
                                  uint32_t *entry_hi, uint32_t *entry_lo0,
                                  uint32_t *entry_lo1);
+int ps2_ee_tlb_arch_read_indexed_masked(const ps2_ee_tlb_arch_t *tlb, unsigned index,
+                                        uint32_t *entry_hi, uint32_t *entry_lo0,
+                                        uint32_t *entry_lo1, uint32_t *page_mask);
 int ps2_ee_tlb_arch_probe(const ps2_ee_tlb_arch_t *tlb,
                           uint32_t virtual_address, unsigned *index);
 int ps2_ee_tlb_arch_translate(const ps2_ee_tlb_arch_t *tlb,

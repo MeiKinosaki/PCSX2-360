@@ -478,5 +478,27 @@ int main(void)
       assert(s.badvaddr == UINT32_C(0x00001010));
       assert(((s.cause >> 2) & 31u) == PS2_EE_EXC_MOD);
     }
+    /* v0.1b CP0 slice: MFC0/MTC0 transfer and register write masks. */
+    {
+      uint32_t mfc0_epc = (UINT32_C(0x10) << 26) | (2u << 16) | (14u << 11);
+      uint32_t mtc0_epc = (UINT32_C(0x10) << 26) | (4u << 21) | (3u << 16) | (14u << 11);
+      uint32_t mtc0_cause = (UINT32_C(0x10) << 26) | (4u << 21) | (4u << 16) | (13u << 11);
+      uint32_t value = 0;
+      ps2_ee_reset(&s);
+      s.epc = UINT32_C(0x80001234);
+      assert(ps2_ee_execute_word(&s, mfc0_epc) == PS2_EE_STEP_OK);
+      assert(s.gpr[2] == UINT64_C(0xffffffff80001234));
+      s.gpr[3] = UINT32_C(0x80005678);
+      assert(ps2_ee_execute_word(&s, mtc0_epc) == PS2_EE_STEP_OK);
+      assert(s.epc == UINT32_C(0x80005678));
+      s.cause = UINT32_C(0x80000024);
+      s.gpr[4] = UINT32_C(0x00000300);
+      assert(ps2_ee_execute_word(&s, mtc0_cause) == PS2_EE_STEP_OK);
+      assert(s.cause == UINT32_C(0x80000324));
+      assert(ps2_ee_cp0_read(&s, 13u, 0u, &value) == 0 && value == s.cause);
+      assert(ps2_ee_cp0_write(&s, 8u, 0u, UINT32_C(0x1234)) == -3);
+      assert(ps2_ee_cp0_read(&s, 0u, 0u, &value) == -2);
+      assert(ps2_ee_cp0_read(&s, 14u, 1u, &value) == -1);
+    }
     puts("OK: EE helpers, decoder, TLB-backed step, scalar memory ops and arithmetic tests.");return 0;
 }

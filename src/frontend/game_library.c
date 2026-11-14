@@ -136,16 +136,13 @@ size_t pcsx2_game_library_snapshot_size(void)
 int pcsx2_game_library_save(const pcsx2_game_library_t *library,
                             uint8_t *out, size_t capacity, size_t *written)
 {
-    size_t i, offset = GAME_LIBRARY_HEADER_SIZE;
-    size_t payload_size;
+    size_t i, j, offset = GAME_LIBRARY_HEADER_SIZE;
+    size_t payload_size, total_size;
+    if (written != NULL) *written = 0u;
     if (library == NULL || out == NULL || written == NULL ||
         library->count > PCSX2_GAME_LIBRARY_MAX) return -1;
-    payload_size = (size_t)GAME_LIBRARY_ENTRY_SIZE * library->count;
-    *written = GAME_LIBRARY_HEADER_SIZE + payload_size;
-    if (capacity < *written) return -2;
-    write_u32_le(out, GAME_LIBRARY_MAGIC);
-    write_u32_le(out + 4, PCSX2_GAME_LIBRARY_SNAPSHOT_VERSION);
-    write_u32_le(out + 8, (uint32_t)library->count);
+
+    /* Validate every record before modifying the caller's output buffer. */
     for (i = 0; i < library->count; ++i) {
         const pcsx2_game_entry_t *entry = &library->entries[i];
         if (!bounded_string_valid(entry->title, sizeof(entry->title)) ||
@@ -153,16 +150,31 @@ int pcsx2_game_library_save(const pcsx2_game_library_t *library,
             !bounded_string_valid(entry->genre, sizeof(entry->genre)) ||
             !bounded_string_valid(entry->image_path, sizeof(entry->image_path)) ||
             !bounded_string_valid(entry->cover_path, sizeof(entry->cover_path)) ||
-            entry->title[0] == '\\0' || entry->serial[0] == '\\0')
-            return -3;
+            entry->title[0] == '\0' || entry->serial[0] == '\0' ||
+            entry->favorite > 1u) return -3;
+        for (j = 0; j < i; ++j) {
+            if (equal_case_insensitive(library->entries[j].serial,
+                                       entry->serial)) return -4;
+        }
+    }
+
+    payload_size = (size_t)GAME_LIBRARY_ENTRY_SIZE * library->count;
+    total_size = GAME_LIBRARY_HEADER_SIZE + payload_size;
+    if (capacity < total_size) return -2;
+    write_u32_le(out, GAME_LIBRARY_MAGIC);
+    write_u32_le(out + 4, PCSX2_GAME_LIBRARY_SNAPSHOT_VERSION);
+    write_u32_le(out + 8, (uint32_t)library->count);
+    for (i = 0; i < library->count; ++i) {
+        const pcsx2_game_entry_t *entry = &library->entries[i];
         memcpy(out + offset, entry->title, sizeof(entry->title)); offset += sizeof(entry->title);
         memcpy(out + offset, entry->serial, sizeof(entry->serial)); offset += sizeof(entry->serial);
         memcpy(out + offset, entry->genre, sizeof(entry->genre)); offset += sizeof(entry->genre);
         memcpy(out + offset, entry->image_path, sizeof(entry->image_path)); offset += sizeof(entry->image_path);
         memcpy(out + offset, entry->cover_path, sizeof(entry->cover_path)); offset += sizeof(entry->cover_path);
-        out[offset++] = entry->favorite ? 1u : 0u;
+        out[offset++] = entry->favorite;
     }
     write_u32_le(out + 12, library_checksum(out + GAME_LIBRARY_HEADER_SIZE, payload_size));
+    *written = total_size;
     return 0;
 }
 

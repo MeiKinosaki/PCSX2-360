@@ -21,6 +21,40 @@ static uint32_t checksum(const uint8_t *p, size_t n)
     return h;
 }
 
+/* Reject malformed serialized TLB slots before restoring any machine state. */
+static int snapshot_tlb_valid(const ps2_ee_tlb_arch_t *tlb)
+{
+    unsigned i;
+    if (tlb == NULL) return 0;
+    for (i = 0; i < 48u; ++i) {
+        const ps2_ee_tlb_pair_entry_t *e = &tlb->entries[i];
+        uint32_t m, compare_mask;
+        if (e->present > 1u || e->global > 1u) return 0;
+        if (!e->present) continue;
+        if ((e->page_mask & ~UINT32_C(0x01ffe000)) != 0u) return 0;
+        m = (e->page_mask & UINT32_C(0x01ffe000)) >> 13;
+        switch (m) {
+        case 0x000u: case 0x003u: case 0x00fu: case 0x03fu:
+        case 0x0ffu: case 0x3ffu: case 0xfffu:
+            break;
+        default:
+            return 0;
+        }
+        compare_mask = ~(e->page_mask | UINT32_C(0x1fff));
+        if ((e->vpn2 & ~compare_mask) != 0u) return 0;
+        if (e->even_page.valid > 1u || e->even_page.dirty > 1u ||
+            e->even_page.global > 1u || e->odd_page.valid > 1u ||
+            e->odd_page.dirty > 1u || e->odd_page.global > 1u)
+            return 0;
+        if ((e->even_page.physical_page & UINT32_C(0xfff)) != 0u ||
+            (e->odd_page.physical_page & UINT32_C(0xfff)) != 0u)
+            return 0;
+        if (e->global != (uint8_t)(e->even_page.global &&
+                                   e->odd_page.global)) return 0;
+    }
+    return 1;
+}
+
 int ps2_ee_state_save(const ps2_ee_state_t *state, uint8_t *out, size_t capacity, size_t *written)
 {
     size_t payload, total;
@@ -93,6 +127,8 @@ int ps2_ee_machine_snapshot_load(ps2_ee_state_t *state, ps2_ee_tlb_arch_t *tlb,
     if(ram_size!=memory->ram_size ||
        payload!=sizeof(candidate_state)+sizeof(candidate_tlb)+4u+(size_t)ram_size) return -7;
     if(candidate_state.gpr[0]!=0u) return -8;
+    if(!snapshot_tlb_valid(&candidate_tlb)) return -9;
+    /* Commit only after the entire payload and every TLB slot are validated. */
     memcpy(memory->ram,p,ram_size);
     *state=candidate_state; *tlb=candidate_tlb;
     return 0;

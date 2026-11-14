@@ -2,6 +2,8 @@
 
 Projeto experimental de emulação de PlayStation 2 para Xbox 360 RGH/JTAG.
 
+**Versão de desenvolvimento: v0.1b — em andamento.**
+
 
 ## Objetivo do build
 

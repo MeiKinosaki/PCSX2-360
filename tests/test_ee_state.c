@@ -485,7 +485,7 @@ int main(void)
       assert(s.badvaddr == UINT32_C(0x00003000));
       assert(s.epc == UINT32_C(0x00003000));
       assert(((s.cause >> 2) & 31u) == PS2_EE_EXC_TLBL);
-      assert(s.pc == UINT32_C(0x80000180));
+      assert(s.pc == UINT32_C(0x80000000));
     }
     /* V2.0.25b: TLBP-like probe distinguishes empty and programmed-invalid slots. */
     {

@@ -1022,8 +1022,10 @@ int main(void)
       original.gpr[7] = UINT64_C(0x1122334455667788);
       original.hi = UINT64_C(0x8877665544332211);
       original.cycle_count = UINT64_C(987654321);
+      size_t snapshot_size = 0u;
       assert(ps2_ee_state_save(&original, snapshot, sizeof(snapshot), &written) == 0);
       assert(written == 16u + sizeof(original));
+      snapshot_size = written;
       /* A rejected save reports no bytes and leaves the output untouched. */
       {
         uint8_t guard[16];
@@ -1037,12 +1039,12 @@ int main(void)
         }
       }
       ps2_ee_reset(&restored);
-      assert(ps2_ee_state_load(&restored, snapshot, written) == 0);
+      assert(ps2_ee_state_load(&restored, snapshot, snapshot_size) == 0);
       assert(restored.pc == original.pc && restored.next_pc == original.next_pc);
       assert(restored.gpr[7] == original.gpr[7] && restored.hi == original.hi);
       assert(restored.cycle_count == original.cycle_count);
-      snapshot[written - 1u] ^= 1u;
-      assert(ps2_ee_state_load(&restored, snapshot, written) == -5);
+      snapshot[snapshot_size - 1u] ^= 1u;
+      assert(ps2_ee_state_load(&restored, snapshot, snapshot_size) == -5);
       assert(restored.pc == original.pc);
     }
 

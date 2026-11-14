@@ -21,8 +21,12 @@ O executável final obrigatório é **`build/default.xex`**. O arquivo ELF, quan
 - [x] Testes de regressão adicionados para TLB miss em leitura, acesso desalinhado e store em página somente leitura.
 - [x] Interface CP0 experimental para BadVAddr, Status, Cause e EPC.
 - [x] Decodificação parcial de MFC0/MTC0 e testes de transferência/máscaras de escrita.
-- [x] Tabela TLB experimental ampliada para 48 slots e teste do índice 47; o modelo ainda usa páginas fixas de 4 KiB, sem EntryLo par/PageMask arquitetural.
-- [x] Execução de `make check` confirmada por CI no commit `926b297` (antes da nova fatia CP0).
+- [x] Tabela TLB experimental ampliada para 48 slots e teste do índice 47.
+- [x] Modelo arquitetural experimental separado com 48 pares de páginas de 4 KiB (EntryHi, EntryLo0/1, ASID, V, D e G).
+- [x] Operações experimentais equivalentes a TLBP (busca) e TLBR (leitura indexada), além da escrita indexada equivalente a TLBWI.
+- [x] Testes host para páginas pares/ímpares, permissões, ASID, entradas duplicadas e round-trip dos registradores TLB; `make check` aprovado no CI do commit `0c6f871`.
+- [ ] Integração das operações TLB com registradores CP0 e implementação TLBWR.
+- [ ] PageMask variável e semântica completa de exceções/delay slots.
 - [ ] Toolchain Xenon configurada e `default.xex` compilado.
 - [ ] Inicialização comprovada em Xbox 360 RGH/JTAG.
 - [ ] Emulação de jogos PS2.
@@ -55,7 +59,7 @@ O job Xenon do GitHub Actions usa runner self-hosted com labels `linux` e `xenon
 ## Próximas etapas
 
 1. Confirmar a regressão host.
-2. Expandir CP0: máscaras arquiteturais, vetores, interrupções, TLB operations e delay slots.
+2. Integrar TLBP/TLBR/TLBWI ao banco CP0 e implementar TLBWR, PageMask e semântica arquitetural completa.
 3. Integrar scheduler, IOP e DMA real.
 4. Desenvolver VU0/VU1, GIF, GS, SPU2 e CDVD.
 5. Criar backend gráfico Xenos e runtime Xbox 360.

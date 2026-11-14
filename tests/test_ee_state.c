@@ -698,6 +698,8 @@ int main(void)
       /* Instruction fetch uses the same architectural paired-page TLB. */
       ps2_ee_reset(&cpu);
       cpu.cp0_entry_hi = 3u;
+      /* Replace the data word with a valid NOP before testing instruction fetch. */
+      assert(ps2_ee_mem_store(&code_mem, UINT32_C(0x1020), 4u, 0u) == 0);
       cpu.pc = UINT32_C(0x20);
       cpu.next_pc = UINT32_C(0x24);
       assert(ps2_ee_step_arch_tlb(&cpu, &code_mem, &code_tlb) == PS2_EE_STEP_OK);

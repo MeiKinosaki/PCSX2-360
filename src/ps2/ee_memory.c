@@ -556,7 +556,6 @@ int ps2_ee_cp0_tlbr(struct ps2_ee_state *opaque_state, const ps2_ee_tlb_arch_t *
     int status;
     uint32_t hi, lo0, lo1, page_mask;
     if (state == 0 || tlb == 0) return PS2_EE_TLB_ERR_ARGUMENT;
-    if (!cp0_tlb_page_mode_supported(state)) return PS2_EE_TLB_ERR_UNSUPPORTED;
     index = state->cp0_index & UINT32_C(0x3f);
     if (index >= 48u) return PS2_EE_TLB_ERR_ARGUMENT;
     status = ps2_ee_tlb_arch_read_indexed_masked(tlb, index, &hi, &lo0, &lo1, &page_mask);

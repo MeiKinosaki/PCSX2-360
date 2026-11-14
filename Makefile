@@ -25,10 +25,12 @@ $(LIBRARY_TEST): src/frontend/game_library.c src/frontend/game_library.h tests/t
 
 validate:
 	@test -s src/main.c
-	@test -s tests/test_ee_state.c\n\t@test -s src/frontend/game_library.c\n\t@test -s src/frontend/game_library.h\n\t@test -s tests/test_game_library.c
+	@test -s tests/test_ee_state.c
+	@test -s src/frontend/game_library.c
+	@test -s src/frontend/game_library.h
+	@test -s tests/test_game_library.c
 	@for f in $(EE_SOURCES); do test -s $$f || exit 2; done
-	@echo "OK: fontes-base do EE encontradas."
-
+	@echo "OK: fontes-base do EE e biblioteca encontradas."
 test-host: $(HOST_TEST) $(LIBRARY_TEST)
 	./$(HOST_TEST)
 	./$(LIBRARY_TEST)

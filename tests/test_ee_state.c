@@ -1062,6 +1062,24 @@ int main(void)
       ram[9] = UINT8_C(0x5a);
       assert(ps2_ee_machine_snapshot_save(&saved, &saved_tlb, &mem, machine_blob,
              sizeof(machine_blob), &blob_size) == 0);
+      /* A checksum-valid snapshot with an impossible PageMask is rejected
+         before CPU, TLB, or RAM state is changed. */
+      {
+        ps2_ee_tlb_arch_t invalid_tlb = saved_tlb;
+        uint8_t invalid_blob[sizeof(machine_blob)];
+        size_t invalid_size = 0u;
+        invalid_tlb.entries[4].present = 1u;
+        invalid_tlb.entries[4].page_mask = 1u; /* unsupported encoding */
+        assert(ps2_ee_machine_snapshot_save(&saved, &invalid_tlb, &mem,
+               invalid_blob, sizeof(invalid_blob), &invalid_size) == 0);
+        ps2_ee_reset(&loaded);
+        loaded.pc = UINT32_C(0x76543210);
+        ram[9] = UINT8_C(0x44);
+        assert(ps2_ee_machine_snapshot_load(&loaded, &loaded_tlb, &mem,
+               invalid_blob, invalid_size) == -9);
+        assert(loaded.pc == UINT32_C(0x76543210));
+        assert(ram[9] == UINT8_C(0x44));
+      }
       {
         uint8_t guard[16];
         size_t rejected_size = 55u, k;

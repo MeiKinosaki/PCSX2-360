@@ -834,6 +834,27 @@ int main(void)
       assert(ps2_ee_step_arch_tlb(&cpu, &code_mem, &code_tlb) == PS2_EE_STEP_OK);
       assert(cpu.pc == UINT32_C(0x24));
 
+      /* A load fault in a branch delay slot sets Cause.BD and EPC to the branch. */
+      {
+        uint32_t beq = (UINT32_C(0x04) << 26) | 3u;
+        uint32_t lw_delay = (UINT32_C(0x23) << 26) | (4u << 21) | (5u << 16);
+        assert(ps2_ee_mem_store(&code_mem, UINT32_C(0x1020), 4u, beq) == 0);
+        assert(ps2_ee_mem_store(&code_mem, UINT32_C(0x1024), 4u, lw_delay) == 0);
+        ps2_ee_reset(&cpu);
+        cpu.cp0_entry_hi = 3u;
+        cpu.pc = UINT32_C(0x20);
+        cpu.next_pc = UINT32_C(0x24);
+        assert(ps2_ee_step_arch_tlb(&cpu, &code_mem, &code_tlb) == PS2_EE_STEP_OK);
+        assert(cpu.in_delay_slot == 1u);
+        assert(cpu.branch_pc == UINT32_C(0x20));
+        cpu.gpr[4] = UINT32_C(0x8000); /* unmapped address faults in delay slot */
+        assert(ps2_ee_step_arch_tlb(&cpu, &code_mem, &code_tlb) == PS2_EE_STEP_EXCEPTION);
+        assert(cpu.badvaddr == UINT32_C(0x8000));
+        assert((cpu.cause & UINT32_C(0x80000000)) != 0u);
+        assert(cpu.epc == UINT32_C(0x20));
+        assert(cpu.in_delay_slot == 0u);
+      }
+
       /* Fetch miss must report the virtual PC in BadVAddr. */
       ps2_ee_reset(&cpu);
       cpu.cp0_entry_hi = 3u;

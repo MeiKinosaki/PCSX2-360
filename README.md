@@ -19,7 +19,9 @@ O executável final obrigatório é **`build/default.xex`**. O arquivo ELF, quan
 - [x] Workflow de regressão host e workflow manual para runner Xenon self-hosted.
 - [x] Primeira rota de exceções para falhas de dados do EE: TLB miss, Modified, ADEL, ADES e DBE no caminho experimental.
 - [x] Testes de regressão adicionados para TLB miss em leitura, acesso desalinhado e store em página somente leitura.
-- [ ] Execução de `make check` neste repositório confirmada por CI.
+- [x] Interface CP0 experimental para BadVAddr, Status, Cause e EPC.
+- [x] Decodificação parcial de MFC0/MTC0 e testes de transferência/máscaras de escrita.
+- [x] Execução de `make check` confirmada por CI no commit `926b297` (antes da nova fatia CP0).
 - [ ] Toolchain Xenon configurada e `default.xex` compilado.
 - [ ] Inicialização comprovada em Xbox 360 RGH/JTAG.
 - [ ] Emulação de jogos PS2.
@@ -52,7 +54,7 @@ O job Xenon do GitHub Actions usa runner self-hosted com labels `linux` e `xenon
 ## Próximas etapas
 
 1. Confirmar a regressão host.
-2. Expandir EE: exceções, CP0, delay slots, instruções faltantes e precisão de memória.
+2. Expandir CP0: máscaras arquiteturais, vetores, interrupções, TLB operations e delay slots.
 3. Integrar scheduler, IOP e DMA real.
 4. Desenvolver VU0/VU1, GIF, GS, SPU2 e CDVD.
 5. Criar backend gráfico Xenos e runtime Xbox 360.

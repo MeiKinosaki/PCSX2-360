@@ -669,5 +669,37 @@ int main(void)
           UINT32_C(0x00401024), 4u, &value) == PS2_EE_MEM_OK);
       assert(value == UINT32_C(0xabcdef01));
     }
+
+    /* Architectural paired-page TLB is exercised by real EE LW/SW decoding. */
+    {
+      uint8_t code_ram[UINT32_C(0x4000)] = {0};
+      ps2_ee_memory_t code_mem = {code_ram, sizeof(code_ram)};
+      ps2_ee_tlb_arch_t code_tlb;
+      ps2_ee_state_t cpu;
+      uint64_t raw = 0;
+      uint32_t sw = (UINT32_C(0x2b) << 26) | (1u << 21) | (2u << 16) | 0x20u;
+      uint32_t lw = (UINT32_C(0x23) << 26) | (1u << 21) | (3u << 16) | 0x20u;
+      ps2_ee_tlb_arch_reset(&code_tlb);
+      ps2_ee_reset(&cpu);
+      cpu.cp0_entry_hi = 3u;
+      assert(ps2_ee_tlb_arch_write_indexed(&code_tlb, 0u,
+          UINT32_C(0x00000003), (UINT32_C(1) << 6) | 7u,
+          (UINT32_C(2) << 6) | 7u) == PS2_EE_TLB_OK);
+      cpu.gpr[1] = 0u;
+      cpu.gpr[2] = UINT32_C(0x89abcdef);
+      cpu.pc = UINT32_C(0x20);
+      assert(ps2_ee_execute_memory_word_arch_tlb(&cpu, &code_mem, &code_tlb, sw) == PS2_EE_STEP_OK);
+      assert(ps2_ee_mem_load(&code_mem, UINT32_C(0x1020), 4u, &raw) == 0);
+      assert((uint32_t)raw == UINT32_C(0x89abcdef));
+      cpu.gpr[1] = 0u;
+      assert(ps2_ee_execute_memory_word_arch_tlb(&cpu, &code_mem, &code_tlb, lw) == PS2_EE_STEP_OK);
+      assert((uint32_t)cpu.gpr[3] == UINT32_C(0x89abcdef));
+      /* A miss must populate BadVAddr and enter the TLB-load exception vector. */
+      cpu.pc = UINT32_C(0x100);
+      assert(ps2_ee_execute_memory_word_arch_tlb(&cpu, &code_mem, &code_tlb,
+          (UINT32_C(0x23) << 26) | (4u << 21) | (5u << 16)) == PS2_EE_STEP_EXCEPTION);
+      assert(cpu.badvaddr == 0u);
+      assert(((cpu.cause >> 2) & 31u) == PS2_EE_EXC_TLBL);
+    }
     puts("OK: EE helpers, decoder, TLB-backed step, scalar memory ops and arithmetic tests.");return 0;
 }

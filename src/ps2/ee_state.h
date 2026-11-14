@@ -43,6 +43,7 @@ typedef struct ps2_ee_state {
     uint32_t cp0_page_mask;
     uint32_t cp0_wired;
     uint32_t cp0_entry_hi;
+    uint64_t cycle_count; /* Deterministic EE cycle counter, included in save states. */
 } ps2_ee_state_t;
 
 /* Initial MIPS-style exception entry; exc_code is the Cause.ExcCode value. */

@@ -526,6 +526,25 @@ int ps2_ee_tlb_arch_translate(const ps2_ee_tlb_arch_t *tlb,
     return PS2_EE_TLB_OK;
 }
 
+/* Route EE virtual addresses through the architectural direct segments first,
+ * then the paired-page TLB. KSEG0/KSEG1 bypass the TLB and are uncached/
+ * cached aliases of the low 512 MiB physical window in this prototype. */
+int ps2_ee_translate_address_arch_tlb(const ps2_ee_tlb_arch_t *tlb,
+                                      uint32_t virtual_address, int is_write,
+                                      uint32_t *physical_address)
+{
+    uint32_t segment;
+    if (physical_address == 0) return PS2_EE_TLB_ERR_ARGUMENT;
+    segment = virtual_address & UINT32_C(0xE0000000);
+    if (segment == UINT32_C(0x80000000) ||
+        segment == UINT32_C(0xA0000000)) {
+        *physical_address = virtual_address & UINT32_C(0x1fffffff);
+        return PS2_EE_TLB_OK;
+    }
+    return ps2_ee_tlb_arch_translate(tlb, virtual_address, is_write,
+                                     physical_address);
+}
+
 /* Experimental access path using the architectural paired-page TLB.
  * This deliberately remains separate from the legacy fixed-page TLB API. */
 int ps2_ee_mem_load_virtual_arch_tlb(ps2_ee_memory_t *m,
@@ -537,7 +556,7 @@ int ps2_ee_mem_load_virtual_arch_tlb(ps2_ee_memory_t *m,
     int status;
     if (m == 0 || m->ram == 0 || value == 0)
         return PS2_EE_MEM_ERR_ARGUMENT;
-    status = ps2_ee_tlb_arch_translate(tlb, virtual_address, 0, &physical_address);
+    status = ps2_ee_translate_address_arch_tlb(tlb, virtual_address, 0, &physical_address);
     if (status != PS2_EE_TLB_OK) return PS2_EE_MEM_ERR_TRANSLATION;
     return ps2_ee_mem_load(m, physical_address, width, value) == 0
            ? PS2_EE_MEM_OK : PS2_EE_MEM_ERR_ACCESS;
@@ -551,7 +570,7 @@ int ps2_ee_mem_store_virtual_arch_tlb(ps2_ee_memory_t *m,
     uint32_t physical_address;
     int status;
     if (m == 0 || m->ram == 0) return PS2_EE_MEM_ERR_ARGUMENT;
-    status = ps2_ee_tlb_arch_translate(tlb, virtual_address, 1, &physical_address);
+    status = ps2_ee_translate_address_arch_tlb(tlb, virtual_address, 1, &physical_address);
     if (status != PS2_EE_TLB_OK) return PS2_EE_MEM_ERR_TRANSLATION;
     return ps2_ee_mem_store(m, physical_address, width, value) == 0
            ? PS2_EE_MEM_OK : PS2_EE_MEM_ERR_ACCESS;

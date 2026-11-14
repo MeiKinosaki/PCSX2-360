@@ -46,6 +46,10 @@ typedef struct ps2_ee_state {
 /* Initial MIPS-style exception entry; exc_code is the Cause.ExcCode value. */
 void ps2_ee_raise_exception(ps2_ee_state_t *state, uint32_t fault_pc,
                             uint32_t exc_code, int in_delay_slot);
+/* Explicitly select the TLB refill vector only for a genuine translation miss. */
+void ps2_ee_raise_exception_ex(ps2_ee_state_t *state, uint32_t fault_pc,
+                               uint32_t exc_code, int in_delay_slot,
+                               int tlb_refill);
 void ps2_ee_reset(ps2_ee_state_t *state);
 /* Partial CP0 register interface: only implemented architectural registers are accepted. */
 int ps2_ee_cp0_read(const ps2_ee_state_t *state, unsigned reg, unsigned sel, uint32_t *value);

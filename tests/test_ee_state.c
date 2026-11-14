@@ -608,6 +608,7 @@ int main(void)
       cp0.cp0_entry_hi = UINT32_C(0x00a00007);
       assert(ps2_ee_cp0_tlbwr(&cp0, &table) == PS2_EE_TLB_OK);
       assert(cp0.cp0_random == 46u);
+      uint32_t physical = 0u;
       cp0.cp0_page_mask = UINT32_C(0x00006000);
       cp0.cp0_index = 10u;
       cp0.cp0_entry_hi = UINT32_C(0x00a00007);

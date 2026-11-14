@@ -353,7 +353,7 @@ ps2_ee_step_result_t ps2_ee_execute_memory_word_arch_tlb(
     }
     lookup = *tlb;
     lookup.current_asid = (uint8_t)(s->cp0_entry_hi & UINT32_C(0xff));
-    status = ps2_ee_tlb_arch_translate(&lookup, address, store, &physical);
+    status = ps2_ee_translate_address_arch_tlb(&lookup, address, store, &physical);
     if (status != PS2_EE_TLB_OK) {
         if (status == PS2_EE_TLB_ERR_MULTIPLE) return PS2_EE_STEP_INVALID;
         s->badvaddr = address;
@@ -406,7 +406,7 @@ ps2_ee_step_result_t ps2_ee_step_arch_tlb(ps2_ee_state_t *s,
     }
     lookup = *tlb;
     lookup.current_asid = (uint8_t)(s->cp0_entry_hi & UINT32_C(0xff));
-    status = ps2_ee_tlb_arch_translate(&lookup, s->pc, 0, &physical);
+    status = ps2_ee_translate_address_arch_tlb(&lookup, s->pc, 0, &physical);
     if (status != PS2_EE_TLB_OK) {
         s->badvaddr = s->pc;
         ps2_ee_raise_exception(s, s->pc, PS2_EE_EXC_TLBL, 0);

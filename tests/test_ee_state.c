@@ -714,6 +714,22 @@ int main(void)
       assert(value == UINT32_C(0x76543210));
     }
 
+    /* KSEG0 instruction fetch must bypass the TLB just like scalar data access. */
+    {
+      uint8_t fetch_ram[UINT32_C(0x1000)] = {0};
+      ps2_ee_memory_t fetch_mem = {fetch_ram, sizeof(fetch_ram)};
+      ps2_ee_tlb_arch_t fetch_tlb;
+      ps2_ee_state_t cpu;
+      ps2_ee_tlb_arch_reset(&fetch_tlb);
+      ps2_ee_reset(&cpu);
+      assert(ps2_ee_mem_store(&fetch_mem, 0u, 4u, 0u) == 0); /* NOP */
+      cpu.pc = UINT32_C(0x80000000);
+      cpu.next_pc = UINT32_C(0x80000004);
+      assert(ps2_ee_step_arch_tlb(&cpu, &fetch_mem, &fetch_tlb) == PS2_EE_STEP_OK);
+      assert(cpu.pc == UINT32_C(0x80000004));
+      assert(((cpu.cause >> 2) & 31u) == 0u);
+    }
+
     /* Architectural paired-page TLB is exercised by real EE LW/SW decoding. */
     {
       uint8_t code_ram[UINT32_C(0x4000)] = {0};

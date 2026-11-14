@@ -348,8 +348,7 @@ ps2_ee_step_result_t ps2_ee_execute_memory_word_arch_tlb(
     address = (uint32_t)s->gpr[rs] + (uint32_t)(int32_t)(int16_t)insn;
     if ((address & (uint32_t)(width - 1u)) != 0u) {
         s->badvaddr = address;
-        ps2_ee_raise_exception(s, s->pc - UINT32_C(4),
-                               store ? PS2_EE_EXC_ADES : PS2_EE_EXC_ADEL, 0);
+        ps2_ee_raise_exception(s, s->pc - UINT32_C(4), store ? PS2_EE_EXC_ADES : PS2_EE_EXC_ADEL, s->in_delay_slot);
         return PS2_EE_STEP_EXCEPTION;
     }
     lookup = *tlb;
@@ -361,21 +360,21 @@ ps2_ee_step_result_t ps2_ee_execute_memory_word_arch_tlb(
         exception_code = status == PS2_EE_TLB_ERR_MODIFIED
                        ? PS2_EE_EXC_MOD
                        : (store ? PS2_EE_EXC_TLBS : PS2_EE_EXC_TLBL);
-        ps2_ee_raise_exception(s, s->pc - UINT32_C(4), exception_code, 0);
+        ps2_ee_raise_exception(s, s->pc - UINT32_C(4), exception_code, s->in_delay_slot);
         return PS2_EE_STEP_EXCEPTION;
     }
     if (store) {
         status = ps2_ee_mem_store(mem, physical, width, s->gpr[rt]);
         if (status != 0) {
             s->badvaddr = address;
-            ps2_ee_raise_exception(s, s->pc - UINT32_C(4), PS2_EE_EXC_DBE, 0);
+            ps2_ee_raise_exception(s, s->pc - UINT32_C(4), PS2_EE_EXC_DBE, s->in_delay_slot);
             return PS2_EE_STEP_EXCEPTION;
         }
     } else {
         status = ps2_ee_mem_load(mem, physical, width, &value);
         if (status != 0) {
             s->badvaddr = address;
-            ps2_ee_raise_exception(s, s->pc - UINT32_C(4), PS2_EE_EXC_DBE, 0);
+            ps2_ee_raise_exception(s, s->pc - UINT32_C(4), PS2_EE_EXC_DBE, s->in_delay_slot);
             return PS2_EE_STEP_EXCEPTION;
         }
         if (sign_extend && width < 8u) {
@@ -389,39 +388,72 @@ ps2_ee_step_result_t ps2_ee_execute_memory_word_arch_tlb(
     return PS2_EE_STEP_OK;
 }
 
+static int ps2_ee_instruction_has_delay_slot(uint32_t instruction)
+{
+    unsigned op = instruction >> 26;
+    unsigned function = instruction & 63u;
+    if (op >= 0x02u && op <= 0x07u) return 1; /* J, JAL, BEQ/BNE/BLEZ/BGTZ */
+    if (op == 0u && (function == 0x08u || function == 0x09u))
+        return 1; /* JR, JALR */
+    return 0;
+}
+
 ps2_ee_step_result_t ps2_ee_step_arch_tlb(ps2_ee_state_t *s,
                                            ps2_ee_memory_t *mem,
                                            ps2_ee_tlb_arch_t *tlb)
 {
     uint64_t raw;
-    uint32_t physical;
-    int status;
+    uint32_t physical, instruction_pc, delay_successor = 0u;
+    int status, was_delay_slot;
     ps2_ee_tlb_arch_t lookup;
     ps2_ee_step_result_t result;
     if (s == NULL || mem == NULL || tlb == NULL) return PS2_EE_STEP_INVALID;
-    /* MIPS instruction fetch requires word alignment; report ADEL before TLB lookup. */
-    if ((s->pc & UINT32_C(3)) != 0u) {
-        s->badvaddr = s->pc;
-        ps2_ee_raise_exception(s, s->pc, PS2_EE_EXC_ADEL, 0);
+    instruction_pc = s->pc;
+    was_delay_slot = s->in_delay_slot != 0u;
+    if (was_delay_slot) delay_successor = s->next_pc;
+    /* MIPS instruction fetch requires word alignment; preserve BD/EPC on delay-slot faults. */
+    if ((instruction_pc & UINT32_C(3)) != 0u) {
+        s->badvaddr = instruction_pc;
+        ps2_ee_raise_exception_ex(s, instruction_pc, PS2_EE_EXC_ADEL,
+                                  was_delay_slot, 0);
         return PS2_EE_STEP_EXCEPTION;
     }
     lookup = *tlb;
     lookup.current_asid = (uint8_t)(s->cp0_entry_hi & UINT32_C(0xff));
-    status = ps2_ee_translate_address_arch_tlb(&lookup, s->pc, 0, &physical);
+    status = ps2_ee_translate_address_arch_tlb(&lookup, instruction_pc, 0, &physical);
     if (status != PS2_EE_TLB_OK) {
-        s->badvaddr = s->pc;
-        ps2_ee_raise_exception_ex(s, s->pc, PS2_EE_EXC_TLBL, 0,
-                                  status == PS2_EE_TLB_ERR_MISS);
+        s->badvaddr = instruction_pc;
+        ps2_ee_raise_exception_ex(s, instruction_pc, PS2_EE_EXC_TLBL,
+                                  was_delay_slot, status == PS2_EE_TLB_ERR_MISS);
         return PS2_EE_STEP_EXCEPTION;
     }
     if (ps2_ee_mem_load(mem, physical, 4u, &raw) != 0) {
-        s->badvaddr = s->pc;
-        ps2_ee_raise_exception(s, s->pc, PS2_EE_EXC_IBE, 0);
+        s->badvaddr = instruction_pc;
+        ps2_ee_raise_exception_ex(s, instruction_pc, PS2_EE_EXC_IBE,
+                                  was_delay_slot, 0);
         return PS2_EE_STEP_EXCEPTION;
     }
-    s->pc = s->next_pc;
-    s->next_pc += 4u;
+    /* During decode, PC is the instruction's PC+4, while next_pc is
+       the sequential successor (or branch target after a delay slot). */
+    s->pc = instruction_pc + UINT32_C(4);
+    s->next_pc = was_delay_slot
+               ? delay_successor + UINT32_C(4)
+               : instruction_pc + UINT32_C(8);
     result = ps2_ee_execute_memory_word_arch_tlb(s, mem, tlb, (uint32_t)raw);
+    if (result == PS2_EE_STEP_OK) {
+        if (was_delay_slot) {
+            s->pc = delay_successor;
+            s->next_pc = delay_successor + UINT32_C(4);
+            s->in_delay_slot = 0u;
+            s->branch_pc = 0u;
+        } else if (ps2_ee_instruction_has_delay_slot((uint32_t)raw)) {
+            s->in_delay_slot = 1u;
+            s->branch_pc = instruction_pc;
+        } else {
+            s->in_delay_slot = 0u;
+            s->branch_pc = 0u;
+        }
+    }
     s->gpr[0] = 0;
     return result;
 }

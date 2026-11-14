@@ -36,7 +36,8 @@ O executável final obrigatório é **`build/default.xex`**. O arquivo ELF, quan
 - [ ] Auditoria diferencial completa da semântica R5900, incluindo PageMask, PFN, delay slots e exceções.
 - [x] Snapshot experimental de máquina: estado EE + TLB arquitetural de 48 entradas + RAM, cabeçalho versionado, tamanho e checksum; testes de round-trip e corrupção adicionados. Ainda é ABI local do build, exige RAM de mesmo tamanho e não inclui IOP/DMA/VU/GS nem persistência integrada ao runtime.
 - [ ] Integração de todas as instruções de memória e fetch no caminho principal da CPU.
-- [x] Modelo inicial de biblioteca de jogos: cadastro limitado, proteção contra serial duplicado, favoritos e filtros por título/serial/gênero; testes dedicados conectados ao `make check`, incluindo capacidade máxima e strings inválidas (aprovação CI pendente).
+- [x] Modelo inicial de biblioteca de jogos: cadastro limitado, proteção contra serial duplicado, favoritos e filtros por título/serial/gênero.
+- [x] Snapshot portátil experimental da biblioteca: formato versionado, campos em ordem fixa little-endian, checksum, validação de tamanho/strings/favoritos/seriais duplicados e validação antes de modificar o destino; regressões de round-trip e corrupção adicionadas (CI pendente).
 - [ ] Toolchain Xenon configurada e `default.xex` compilado.
 - [x] Bloqueios técnicos e ordem de resolução documentados em `docs/KNOWN_BLOCKERS.md`.
 - [ ] Inicialização comprovada em Xbox 360 RGH/JTAG.

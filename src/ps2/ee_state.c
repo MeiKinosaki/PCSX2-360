@@ -17,8 +17,9 @@ void ps2_ee_reset(ps2_ee_state_t *state)
     state->gpr[0] = 0;
 }
 
-void ps2_ee_raise_exception(ps2_ee_state_t *state, uint32_t fault_pc,
-                            uint32_t exc_code, int in_delay_slot)
+void ps2_ee_raise_exception_ex(ps2_ee_state_t *state, uint32_t fault_pc,
+                                uint32_t exc_code, int in_delay_slot,
+                                int tlb_refill)
 {
     uint32_t vector_base, vector_offset = UINT32_C(0x180);
     int already_exl;
@@ -41,7 +42,8 @@ void ps2_ee_raise_exception(ps2_ee_state_t *state, uint32_t fault_pc,
         else state->cause &= ~UINT32_C(0x80000000);
         /* R5900 TLB refill exceptions use the refill vector; nested
            exceptions while EXL is set use the general exception vector. */
-        if (exc_code == PS2_EE_EXC_TLBL || exc_code == PS2_EE_EXC_TLBS)
+        if (tlb_refill &&
+            (exc_code == PS2_EE_EXC_TLBL || exc_code == PS2_EE_EXC_TLBS))
             vector_offset = 0u;
     }
     state->status |= UINT32_C(0x2);
@@ -50,6 +52,13 @@ void ps2_ee_raise_exception(ps2_ee_state_t *state, uint32_t fault_pc,
     state->pc = vector_base + vector_offset;
     state->next_pc = state->pc + UINT32_C(4);
     state->gpr[0] = 0;
+}
+
+void ps2_ee_raise_exception(ps2_ee_state_t *state, uint32_t fault_pc,
+                            uint32_t exc_code, int in_delay_slot)
+{
+    ps2_ee_raise_exception_ex(state, fault_pc, exc_code, in_delay_slot,
+        exc_code == PS2_EE_EXC_TLBL || exc_code == PS2_EE_EXC_TLBS);
 }
 
 int ps2_ee_cp0_read(const ps2_ee_state_t *state, unsigned reg, unsigned sel, uint32_t *value)

@@ -765,8 +765,8 @@ int main(void)
       ps2_ee_state_t cpu;
       uint32_t sw = (UINT32_C(0x2b) << 26) | (1u << 21) | (2u << 16) | 0x20u;
       uint32_t lw = (UINT32_C(0x23) << 26) | (1u << 21) | (3u << 16) | 0x20u;
-      uint32_t lo_even_clean = (UINT32_C(1) << 6) | 5u; /* V=1, D=0 */
-      uint32_t lo_odd_dirty = (UINT32_C(2) << 6) | 7u; /* V=1, D=1 */
+      uint32_t lo_even_clean = (UINT32_C(1) << 6) | 2u; /* G=0, V=1, D=0 */
+      uint32_t lo_odd_dirty = (UINT32_C(2) << 6) | 7u; /* G=1, V=1, D=1 */
       ps2_ee_tlb_arch_reset(&fault_tlb);
       fault_tlb.current_asid = 3u;
       ps2_ee_reset(&cpu);

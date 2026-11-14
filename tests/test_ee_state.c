@@ -12,6 +12,21 @@ int main(void)
 {
     ps2_ee_state_t s; uint8_t ram[64]={0}; ps2_ee_memory_t mem={ram,sizeof ram}; uint64_t loaded=0;
     ps2_ee_reset(&s); assert(s.pc==UINT32_C(0xBFC00000)&&s.next_pc==UINT32_C(0xBFC00004)); assert(s.gpr[0]==0);
+    /* Reverse-engineered MIPS exception rule: a delay-slot fault records
+       the branch PC in EPC and sets Cause.BD; EXL preserves EPC/Cause. */
+    {
+        ps2_ee_state_t ex;
+        ps2_ee_reset(&ex);
+        ps2_ee_raise_exception(&ex, UINT32_C(0x1004), PS2_EE_EXC_TLBL, 1);
+        assert(ex.epc == UINT32_C(0x1000));
+        assert((ex.cause & UINT32_C(0x80000000)) != 0u);
+        assert(((ex.cause >> 2) & 31u) == PS2_EE_EXC_TLBL);
+        assert((ex.status & UINT32_C(0x2)) != 0u);
+        ps2_ee_raise_exception(&ex, UINT32_C(0x2000), PS2_EE_EXC_TLBS, 0);
+        assert(ex.epc == UINT32_C(0x1000));
+        assert(((ex.cause >> 2) & 31u) == PS2_EE_EXC_TLBL);
+    }
+
     s.gpr[1]=20;s.gpr[2]=22;assert(ps2_ee_add32(&s,3,1,2)==0&&s.gpr[3]==42);
     s.gpr[1]=5;s.gpr[2]=9;assert(ps2_ee_sub32(&s,4,1,2)==0&&(int64_t)s.gpr[4]==-4);
     s.gpr[1]=UINT32_C(0x7fffffff);s.gpr[2]=1;assert(ps2_ee_add32(&s,5,1,2)==1);

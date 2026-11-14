@@ -1,4 +1,5 @@
 #include "../src/ps2/ee_state.h"
+#include "../src/ps2/ee_state_io.h"
 #include "../src/ps2/ee_ops.h"
 #include "../src/ps2/ee_immediate.h"
 #include "../src/ps2/ee_compare.h"
@@ -1011,5 +1012,27 @@ int main(void)
       assert(ps2_ee_tlb_arch_probe(&tlb, UINT32_C(0x01678020), &found) == PS2_EE_TLB_OK);
       assert(found == 47u);
     }
-    puts("OK: EE helpers, decoder, TLB-backed step, scalar memory ops and arithmetic tests.");return 0;
+    /* Versioned EE save/load snapshot round-trip and corruption rejection. */
+    {
+      uint8_t snapshot[PS2_EE_SNAPSHOT_MAX_SIZE];
+      size_t written = 0u;
+      ps2_ee_state_t original, restored;
+      ps2_ee_reset(&original);
+      original.pc = UINT32_C(0x00123450);
+      original.next_pc = UINT32_C(0x00123454);
+      original.gpr[7] = UINT64_C(0x1122334455667788);
+      original.hi = UINT64_C(0x8877665544332211);
+      original.cycle_count = UINT64_C(987654321);
+      assert(ps2_ee_state_save(&original, snapshot, sizeof(snapshot), &written) == 0);
+      assert(written == 16u + sizeof(original));
+      ps2_ee_reset(&restored);
+      assert(ps2_ee_state_load(&restored, snapshot, written) == 0);
+      assert(restored.pc == original.pc && restored.next_pc == original.next_pc);
+      assert(restored.gpr[7] == original.gpr[7] && restored.hi == original.hi);
+      assert(restored.cycle_count == original.cycle_count);
+      snapshot[written - 1u] ^= 1u;
+      assert(ps2_ee_state_load(&restored, snapshot, written) == -5);
+      assert(restored.pc == original.pc);
+    }
+    puts("OK: EE helpers, decoder, TLB-backed step, scalar memory ops, arithmetic and snapshot tests.");return 0;
 }

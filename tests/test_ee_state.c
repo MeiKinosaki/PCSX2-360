@@ -1,5 +1,4 @@
 #include "../src/ps2/ee_state.h"
-#include "../src/ps2/ee_state_io.h"
 #include "../src/ps2/ee_ops.h"
 #include "../src/ps2/ee_immediate.h"
 #include "../src/ps2/ee_compare.h"

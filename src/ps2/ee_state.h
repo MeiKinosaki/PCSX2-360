@@ -38,6 +38,9 @@ typedef struct ps2_ee_state {
 void ps2_ee_raise_exception(ps2_ee_state_t *state, uint32_t fault_pc,
                             uint32_t exc_code, int in_delay_slot);
 void ps2_ee_reset(ps2_ee_state_t *state);
+/* Partial CP0 register interface: only implemented architectural registers are accepted. */
+int ps2_ee_cp0_read(const ps2_ee_state_t *state, unsigned reg, unsigned sel, uint32_t *value);
+int ps2_ee_cp0_write(ps2_ee_state_t *state, unsigned reg, unsigned sel, uint32_t value);
 int ps2_ee_add32(ps2_ee_state_t *state, unsigned rd,
                  unsigned rs, unsigned rt);
 int ps2_ee_sub32(ps2_ee_state_t *state, unsigned rd,

@@ -157,7 +157,7 @@ ps2_ee_step_result_t ps2_ee_execute_word_arch_tlb(
     case 0x01u: status = ps2_ee_cp0_tlbr(s, tlb); break; /* TLBR */
     case 0x02u: status = ps2_ee_cp0_tlbwi(s, tlb); break; /* TLBWI */
     case 0x06u: status = ps2_ee_cp0_tlbwr(s, tlb); break; /* TLBWR */
-    case 0x08u: status = ps2_ee_cp0_tlbp(s, tlb); break; /* TLBP */
+    case 0x08u: status = ps2_ee_cp0_tlbp(s, tlb);\n        if (status == PS2_EE_TLB_ERR_MISS) status = PS2_EE_TLB_OK;\n        break; /* TLBP: a miss is reported in Index, not as an execution fault */
     default: return PS2_EE_STEP_UNSUPPORTED;
     }
     s->gpr[0] = 0;

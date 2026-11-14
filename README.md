@@ -2,9 +2,9 @@
 
 Projeto experimental de emulação de PlayStation 2 para Xbox 360 RGH/JTAG.
 
-**Versão de desenvolvimento: v0.2b — em andamento.**
+**Versão de desenvolvimento: v0.3b — em andamento.**
 
-**Progresso global estimado: 24%.** Marco atual: além da integração experimental COP0/TLB e PageMask variável, o estado EE agora inclui CP0.Context e atualização de BadVAddr/Context.BadVPN2/EntryHi.VPN2 nas exceções TLB. Foi adicionada a distinção entre TLB miss real (vetor refill) e entrada TLB inválida (vetor geral), com testes dedicados; a validação CI dessas alterações ainda está pendente. O executor EE agora rastreia o branch proprietário do delay slot, preserva EPC/Cause.BD em falhas de fetch, memória e overflow aritmético, e mantém o destino do desvio após o slot; regressões específicas foram adicionadas. Uma nova regressão cobre o desvio tomado completo: execução da instrução no delay slot e retomada no endereço-alvo, com execução da instrução-alvo.
+**Progresso global estimado: 25%.** Marco v0.3b: integração experimental de CP0/TLB e PageMask variável; CP0.Context, BadVAddr, Context.BadVPN2 e EntryHi.VPN2 nas exceções TLB; distinção entre TLB miss e entrada inválida; rastreamento do branch proprietário do delay slot, EPC/Cause.BD em exceções e retomada no destino do desvio. A regressão host `make check` foi aprovada no GitHub Actions para o commit `a70db3a1bc87694124747736eba7bc63e1fbaa4a` (run `43644957989`). O resultado valida apenas os testes host incluídos, não a precisão integral do R5900 nem a compatibilidade com jogos.
 
 
 ## Objetivo do build
@@ -30,7 +30,7 @@ O executável final obrigatório é **`build/default.xex`**. O arquivo ELF, quan
 - [x] Estado CP0.Context (registrador 4), leitura/escrita parcial e atualização dos campos BadVPN2/VPN2 em falhas TLB; testes adicionados, aguardando validação no CI.
 - [x] Exceções TLB distinguem miss real (refill vector) de entrada programada inválida (general vector); teste unitário adicionado, CI pendente.
 - [x] Rastreamento experimental de delay slots no step EE: branch PC, destino após slot, EPC e Cause.BD em falhas de fetch/dados; teste de falha de load no slot e alvo do branch adicionados. CI pendente.
-- [x] Regressão do caminho feliz de branch tomado: uma instrução no delay slot, chegada ao alvo e execução da instrução-alvo; execução no CI ainda não confirmada.
+- [x] Regressão do caminho feliz de branch tomado: uma instrução no delay slot, chegada ao alvo e execução da instrução-alvo; `make check` aprovado no CI do commit `a70db3a`.
 - [x] Testes host para TLB pareada, ASID, permissões, busca sem correspondência, round-trip CP0/TLB, TLBWR e PageMask.
 - [x] Regressão host `make check` aprovada no CI do commit `933a44c` (run `43626390249`).
 - [ ] Auditoria diferencial completa da semântica R5900, incluindo PageMask, PFN, delay slots e exceções.

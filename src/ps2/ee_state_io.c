@@ -24,13 +24,15 @@ static uint32_t checksum(const uint8_t *p, size_t n)
 int ps2_ee_state_save(const ps2_ee_state_t *state, uint8_t *out, size_t capacity, size_t *written)
 {
     size_t payload, total;
+    if(written) *written=0u;
     if(!state || !out || !written) return -1;
-    payload=sizeof(*state); total=SNAPSHOT_HEADER_SIZE+payload; *written=total;
+    payload=sizeof(*state); total=SNAPSHOT_HEADER_SIZE+payload;
     if(capacity<total) return -2;
     put_u32(out,SNAPSHOT_MAGIC_EE); put_u32(out+4,PS2_EE_SNAPSHOT_VERSION);
     put_u32(out+8,(uint32_t)payload);
     memcpy(out+SNAPSHOT_HEADER_SIZE,state,payload);
     put_u32(out+12,checksum(out+SNAPSHOT_HEADER_SIZE,payload));
+    *written=total;
     return 0;
 }
 
@@ -54,11 +56,12 @@ int ps2_ee_machine_snapshot_save(const ps2_ee_state_t *state, const ps2_ee_tlb_a
                                  size_t capacity, size_t *written)
 {
     size_t payload,total; uint8_t *p;
+    if(written) *written=0u;
     if(!state || !tlb || !memory || !memory->ram || !out || !written) return -1;
     if(memory->ram_size>UINT32_MAX ||
        memory->ram_size>SIZE_MAX-sizeof(*state)-sizeof(*tlb)-4u-SNAPSHOT_HEADER_SIZE) return -2;
     payload=sizeof(*state)+sizeof(*tlb)+4u+memory->ram_size;
-    total=SNAPSHOT_HEADER_SIZE+payload; *written=total;
+    total=SNAPSHOT_HEADER_SIZE+payload;
     if(capacity<total) return -3;
     put_u32(out,SNAPSHOT_MAGIC_MACHINE); put_u32(out+4,1u); put_u32(out+8,(uint32_t)payload);
     p=out+SNAPSHOT_HEADER_SIZE;
@@ -67,6 +70,7 @@ int ps2_ee_machine_snapshot_save(const ps2_ee_state_t *state, const ps2_ee_tlb_a
     put_u32(p,(uint32_t)memory->ram_size); p+=4;
     memcpy(p,memory->ram,memory->ram_size);
     put_u32(out+12,checksum(out+SNAPSHOT_HEADER_SIZE,payload));
+    *written=total;
     return 0;
 }
 

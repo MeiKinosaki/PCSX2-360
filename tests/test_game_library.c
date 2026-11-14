@@ -78,6 +78,27 @@ int main(void)
         assert(full.count == PCSX2_GAME_LIBRARY_MAX);
     }
 
-    puts("OK: game library add, duplicate protection, favorites, filters and bounds.");
+    /* Portable snapshot round-trip, checksum rejection and atomic load. */
+    {
+        uint8_t snapshot[PCSX2_GAME_LIBRARY_SNAPSHOT_VERSION == 1u ?
+                         (16u + PCSX2_GAME_LIBRARY_MAX *
+                          (PCSX2_GAME_TITLE_MAX + PCSX2_GAME_SERIAL_MAX +
+                           PCSX2_GAME_GENRE_MAX + 2u * PCSX2_GAME_PATH_MAX + 1u)) : 1u];
+        size_t written = 0u;
+        pcsx2_game_library_t restored;
+        pcsx2_game_library_init(&restored);
+        assert(pcsx2_game_library_save(&library, snapshot, sizeof(snapshot), &written) == 0);
+        assert(written < sizeof(snapshot));
+        assert(pcsx2_game_library_load(&restored, snapshot, written) == 0);
+        assert(restored.count == library.count);
+        assert(restored.entries[0].favorite == library.entries[0].favorite);
+        assert(strcmp(restored.entries[1].title, library.entries[1].title) == 0);
+        snapshot[written - 1u] ^= 0x01u;
+        assert(pcsx2_game_library_load(&restored, snapshot, written) == -6);
+        assert(restored.count == library.count);
+        assert(pcsx2_game_library_save(&library, snapshot, 1u, &written) == -2);
+    }
+
+    puts("OK: game library add, duplicate protection, favorites, filters, bounds and persistence.");
     return 0;
 }

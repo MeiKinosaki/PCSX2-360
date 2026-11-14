@@ -54,6 +54,18 @@ int main(void)
         assert(ex.pc == UINT32_C(0xBFC00200));
     }
 
+    /* A programmed-but-invalid TLB half is not a refill miss: it uses
+       the general exception vector, unlike an absent translation. */
+    {
+        ps2_ee_state_t ex;
+        ps2_ee_reset(&ex);
+        ps2_ee_raise_exception_ex(&ex, UINT32_C(0x4000), PS2_EE_EXC_TLBL, 0, 0);
+        assert(ex.pc == UINT32_C(0x80000180));
+        ps2_ee_reset(&ex);
+        ps2_ee_raise_exception_ex(&ex, UINT32_C(0x4000), PS2_EE_EXC_TLBL, 0, 1);
+        assert(ex.pc == UINT32_C(0x80000000));
+    }
+
     /* Reverse-engineered MIPS exception rule: a delay-slot fault records
        the branch PC in EPC and sets Cause.BD; EXL preserves EPC/Cause. */
     {

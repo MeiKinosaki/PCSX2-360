@@ -514,6 +514,7 @@ int main(void)
       uint32_t lo0 = (UINT32_C(0x00012) << 6) | 0x7u; /* PFN, D, V, G */
       uint32_t lo1 = (UINT32_C(0x00034) << 6) | 0x2u; /* PFN, V; read-only, non-global */
       ps2_ee_tlb_arch_reset(&tlb);
+      tlb.current_asid = 5u;
       assert(ps2_ee_tlb_arch_probe(&tlb, UINT32_C(0x00400020), &index) == PS2_EE_TLB_ERR_MISS);
       assert(ps2_ee_tlb_arch_write_indexed(&tlb, 47u, hi, lo0, lo1) == PS2_EE_TLB_OK);
       assert(ps2_ee_tlb_arch_probe(&tlb, UINT32_C(0x00400020), &index) == PS2_EE_TLB_OK);
@@ -527,6 +528,7 @@ int main(void)
       assert(ps2_ee_tlb_arch_write_indexed(&tlb, 48u, hi, lo0, lo1) == PS2_EE_TLB_ERR_ARGUMENT);
       tlb.current_asid = 6u;
       assert(ps2_ee_tlb_arch_probe(&tlb, UINT32_C(0x00400020), &index) == PS2_EE_TLB_ERR_MISS);
+      tlb.current_asid = 5u;
       /* Both EntryLo G bits are required for a global pair. */
       assert(ps2_ee_tlb_arch_write_indexed(&tlb, 46u, hi, lo0, lo1 | 1u) == PS2_EE_TLB_OK);
       assert(ps2_ee_tlb_arch_probe(&tlb, UINT32_C(0x00400020), &index) == PS2_EE_TLB_ERR_MULTIPLE);

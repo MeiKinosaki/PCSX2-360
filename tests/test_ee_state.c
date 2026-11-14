@@ -430,5 +430,44 @@ int main(void)
       assert(ps2_ee_tlb_translate(&tlb, UINT32_C(0x00401010), 0, &physical) == PS2_EE_TLB_ERR_MISS);
       assert(physical == UINT32_C(0xdeadbeef));
     }
+    /* V2.0.24b: data-side TLB miss, read-only store and alignment exceptions. */
+    {
+      ps2_ee_tlb_t tlb;
+      uint32_t lw = (UINT32_C(0x23) << 26) | (1u << 21) | (2u << 16);
+      uint32_t sw = (UINT32_C(0x2b) << 26) | (1u << 21) | (2u << 16);
+      ps2_ee_tlb_reset(&tlb);
+      assert(ps2_ee_tlb_write(&tlb, 0, UINT32_C(0x00001000), 0,
+                              0, 1, 1, 0) == PS2_EE_TLB_OK);
+      assert(ps2_ee_mem_store(&mem, 0, 4, lw) == 0);
+      ps2_ee_reset(&s);
+      s.pc = UINT32_C(0x00001000);
+      s.next_pc = UINT32_C(0x00001004);
+      s.gpr[1] = UINT32_C(0x00002000); /* Unmapped data page. */
+      assert(ps2_ee_step_tlb(&s, &mem, &tlb) == PS2_EE_STEP_EXCEPTION);
+      assert(s.badvaddr == UINT32_C(0x00002000));
+      assert(s.epc == UINT32_C(0x00001000));
+      assert(((s.cause >> 2) & 31u) == PS2_EE_EXC_TLBL);
+
+      /* Misaligned LW raises Address Error Load before translation. */
+      assert(ps2_ee_mem_store(&mem, 0, 4, lw) == 0);
+      ps2_ee_reset(&s);
+      s.pc = UINT32_C(0x00001000);
+      s.next_pc = UINT32_C(0x00001004);
+      s.gpr[1] = UINT32_C(0x00001001);
+      assert(ps2_ee_step_tlb(&s, &mem, &tlb) == PS2_EE_STEP_EXCEPTION);
+      assert(s.badvaddr == UINT32_C(0x00001001));
+      assert(((s.cause >> 2) & 31u) == PS2_EE_EXC_ADEL);
+
+      /* A valid read-only mapping rejects SW with Modified exception. */
+      assert(ps2_ee_mem_store(&mem, 0, 4, sw) == 0);
+      ps2_ee_reset(&s);
+      s.pc = UINT32_C(0x00001000);
+      s.next_pc = UINT32_C(0x00001004);
+      s.gpr[1] = UINT32_C(0x00001010);
+      s.gpr[2] = UINT32_C(0x12345678);
+      assert(ps2_ee_step_tlb(&s, &mem, &tlb) == PS2_EE_STEP_EXCEPTION);
+      assert(s.badvaddr == UINT32_C(0x00001010));
+      assert(((s.cause >> 2) & 31u) == PS2_EE_EXC_MOD);
+    }
     puts("OK: EE helpers, decoder, TLB-backed step, scalar memory ops and arithmetic tests.");return 0;
 }

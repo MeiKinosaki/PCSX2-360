@@ -2,7 +2,9 @@
 
 Projeto experimental de emulação de PlayStation 2 para Xbox 360 RGH/JTAG.
 
-**Versão de desenvolvimento: v0.1b — em andamento.**
+**Versão de desenvolvimento: v0.2b — em andamento.**
+
+**Progresso global estimado: 20%.** Marco v0.2b: integração experimental das operações COP0/TLB ao despachante EE, PageMask variável validado por testes host e regressão aprovada no commit `933a44c`.
 
 
 ## Objetivo do build
@@ -23,10 +25,12 @@ O executável final obrigatório é **`build/default.xex`**. O arquivo ELF, quan
 - [x] Decodificação parcial de MFC0/MTC0 e testes de transferência/máscaras de escrita.
 - [x] Tabela TLB experimental ampliada para 48 slots e teste do índice 47.
 - [x] Modelo arquitetural experimental separado com 48 pares de páginas de 4 KiB (EntryHi, EntryLo0/1, ASID, V, D e G).
-- [x] Operações experimentais equivalentes a TLBP (busca) e TLBR (leitura indexada), além da escrita indexada equivalente a TLBWI.
-- [x] Testes host para páginas pares/ímpares, permissões, ASID, entradas duplicadas e round-trip dos registradores TLB; `make check` aprovado no CI do commit `0c6f871`.
-- [ ] Integração das operações TLB com registradores CP0 e implementação TLBWR.
-- [ ] PageMask variável e semântica completa de exceções/delay slots.
+- [x] Operações COP0/TLB experimentais ligadas ao despachante arquitetural: TLBP, TLBR, TLBWI e TLBWR.
+- [x] PageMask variável com sete codificações de tamanho de página aceitas pela implementação experimental e máscaras inválidas rejeitadas.
+- [x] Testes host para TLB pareada, ASID, permissões, busca sem correspondência, round-trip CP0/TLB, TLBWR e PageMask.
+- [x] Regressão host `make check` aprovada no CI do commit `933a44c` (run `43626390249`).
+- [ ] Auditoria diferencial completa da semântica R5900, incluindo PageMask, PFN, delay slots e exceções.
+- [ ] Integração de todas as instruções de memória e fetch no caminho principal da CPU.
 - [ ] Toolchain Xenon configurada e `default.xex` compilado.
 - [ ] Inicialização comprovada em Xbox 360 RGH/JTAG.
 - [ ] Emulação de jogos PS2.
@@ -58,12 +62,12 @@ O job Xenon do GitHub Actions usa runner self-hosted com labels `linux` e `xenon
 
 ## Próximas etapas
 
-1. Confirmar a regressão host.
-2. Integrar TLBP/TLBR/TLBWI ao banco CP0 e implementar TLBWR, PageMask e semântica arquitetural completa.
-3. Integrar scheduler, IOP e DMA real.
-4. Desenvolver VU0/VU1, GIF, GS, SPU2 e CDVD.
+1. Auditar CP0/TLB por testes diferenciais contra referências R5900/PCSX2, incluindo PageMask, PFN e exceções.
+2. Fechar o caminho de fetch, load/store e exceções com a TLB arquitetural no executor principal.
+3. Integrar scheduler EE, IOP e os dez canais DMA reais.
+4. Desenvolver VU0/VU1, VIF, GIF, GS, SPU2 e CDVD.
 5. Criar backend gráfico Xenos e runtime Xbox 360.
-6. Gerar e testar `default.xex` no console.
+6. Configurar runner Xenon, gerar `build/default.xex` e testar no console.
 
 ## Regras de progresso
 

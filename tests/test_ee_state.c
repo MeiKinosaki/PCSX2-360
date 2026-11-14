@@ -856,6 +856,28 @@ int main(void)
         assert(cpu.in_delay_slot == 0u);
       }
 
+      /* A successful taken branch executes exactly one delay-slot instruction,
+         then resumes at the branch target (not target+4 or fall-through). */
+      {
+        uint32_t beq = (UINT32_C(0x04) << 26) | 3u;
+        uint32_t addiu_delay = (UINT32_C(0x09) << 26) | (6u << 16) | 42u;
+        uint32_t addiu_target = (UINT32_C(0x09) << 26) | (7u << 16) | 7u;
+        assert(ps2_ee_mem_store(&code_mem, UINT32_C(0x1020), 4u, beq) == 0);
+        assert(ps2_ee_mem_store(&code_mem, UINT32_C(0x1024), 4u, addiu_delay) == 0);
+        assert(ps2_ee_mem_store(&code_mem, UINT32_C(0x1030), 4u, addiu_target) == 0);
+        ps2_ee_reset(&cpu);
+        cpu.cp0_entry_hi = 3u;
+        cpu.pc = UINT32_C(0x20);
+        cpu.next_pc = UINT32_C(0x24);
+        assert(ps2_ee_step_arch_tlb(&cpu, &code_mem, &code_tlb) == PS2_EE_STEP_OK);
+        assert(cpu.pc == UINT32_C(0x24) && cpu.in_delay_slot == 1u);
+        assert(ps2_ee_step_arch_tlb(&cpu, &code_mem, &code_tlb) == PS2_EE_STEP_OK);
+        assert(cpu.gpr[6] == 42u);
+        assert(cpu.pc == UINT32_C(0x30) && cpu.in_delay_slot == 0u);
+        assert(ps2_ee_step_arch_tlb(&cpu, &code_mem, &code_tlb) == PS2_EE_STEP_OK);
+        assert(cpu.gpr[7] == 7u);
+      }
+
       /* Fetch miss must report the virtual PC in BadVAddr. */
       ps2_ee_reset(&cpu);
       cpu.cp0_entry_hi = 3u;

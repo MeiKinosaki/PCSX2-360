@@ -415,8 +415,8 @@ int ps2_ee_tlb_arch_write_indexed_masked(ps2_ee_tlb_arch_t *tlb, unsigned index,
 {
     ps2_ee_tlb_pair_entry_t *entry;
     uint32_t pair_mask;
-    if (tlb == 0 || index >= 48u || !tlb_page_mask_valid(page_mask))
-        return page_mask == 0u ? PS2_EE_TLB_ERR_ARGUMENT : PS2_EE_TLB_ERR_UNSUPPORTED;
+    if (tlb == 0 || index >= 48u) return PS2_EE_TLB_ERR_ARGUMENT;
+    if (!tlb_page_mask_valid(page_mask)) return PS2_EE_TLB_ERR_UNSUPPORTED;
     pair_mask = tlb_pair_compare_mask(page_mask);
     entry = &tlb->entries[index];
     entry->page_mask = page_mask;

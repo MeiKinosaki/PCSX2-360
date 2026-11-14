@@ -409,6 +409,29 @@ int ps2_ee_tlb_arch_write_indexed(ps2_ee_tlb_arch_t *tlb, unsigned index,
     return PS2_EE_TLB_OK;
 }
 
+
+int ps2_ee_tlb_arch_read_indexed(const ps2_ee_tlb_arch_t *tlb, unsigned index,
+                                 uint32_t *entry_hi, uint32_t *entry_lo0,
+                                 uint32_t *entry_lo1)
+{
+    const ps2_ee_tlb_pair_entry_t *entry;
+    if (tlb == 0 || index >= 48u || entry_hi == 0 ||
+        entry_lo0 == 0 || entry_lo1 == 0)
+        return PS2_EE_TLB_ERR_ARGUMENT;
+    entry = &tlb->entries[index];
+    if (!entry->present) return PS2_EE_TLB_ERR_MISS;
+    *entry_hi = entry->vpn2 | entry->asid;
+    *entry_lo0 = ((entry->even_page.physical_page >> 12) << 6) |
+                 ((uint32_t)entry->even_page.dirty << 2) |
+                 ((uint32_t)entry->even_page.valid << 1) |
+                 (uint32_t)entry->global;
+    *entry_lo1 = ((entry->odd_page.physical_page >> 12) << 6) |
+                 ((uint32_t)entry->odd_page.dirty << 2) |
+                 ((uint32_t)entry->odd_page.valid << 1) |
+                 (uint32_t)entry->global;
+    return PS2_EE_TLB_OK;
+}
+
 int ps2_ee_tlb_arch_probe(const ps2_ee_tlb_arch_t *tlb,
                           uint32_t virtual_address, unsigned *index)
 {

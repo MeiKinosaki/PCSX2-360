@@ -757,6 +757,54 @@ int main(void)
       assert(((cpu.cause >> 2) & 31u) == PS2_EE_EXC_TLBL);
     }
 
+    /* Architectural TLB faults must distinguish MOD, TLBL and TLBS. */
+    {
+      uint8_t fault_ram[UINT32_C(0x4000)] = {0};
+      ps2_ee_memory_t fault_mem = {fault_ram, sizeof(fault_ram)};
+      ps2_ee_tlb_arch_t fault_tlb;
+      ps2_ee_state_t cpu;
+      uint32_t sw = (UINT32_C(0x2b) << 26) | (1u << 21) | (2u << 16) | 0x20u;
+      uint32_t lw = (UINT32_C(0x23) << 26) | (1u << 21) | (3u << 16) | 0x20u;
+      uint32_t lo_even_clean = (UINT32_C(1) << 6) | 5u; /* V=1, D=0 */
+      uint32_t lo_odd_dirty = (UINT32_C(2) << 6) | 7u; /* V=1, D=1 */
+      ps2_ee_tlb_arch_reset(&fault_tlb);
+      fault_tlb.current_asid = 3u;
+      ps2_ee_reset(&cpu);
+      cpu.cp0_entry_hi = 3u;
+      cpu.gpr[1] = 0u;
+      cpu.gpr[2] = UINT32_C(0xfeed1234);
+      cpu.pc = UINT32_C(0x24);
+      assert(ps2_ee_tlb_arch_write_indexed(&fault_tlb, 0u, 3u,
+          lo_even_clean, lo_odd_dirty) == PS2_EE_TLB_OK);
+      assert(ps2_ee_execute_memory_word_arch_tlb(&cpu, &fault_mem,
+          &fault_tlb, sw) == PS2_EE_STEP_EXCEPTION);
+      assert(cpu.badvaddr == UINT32_C(0x20));
+      assert(((cpu.cause >> 2) & 31u) == PS2_EE_EXC_MOD);
+      assert(cpu.epc == UINT32_C(0x20));
+
+      /* An invalid even half causes TLBL on reads and TLBS on writes. */
+      assert(ps2_ee_tlb_arch_write_indexed(&fault_tlb, 0u, 3u,
+          (UINT32_C(1) << 6) | 4u, lo_odd_dirty) == PS2_EE_TLB_OK);
+      ps2_ee_reset(&cpu);
+      cpu.cp0_entry_hi = 3u;
+      cpu.gpr[1] = 0u;
+      cpu.pc = UINT32_C(0x24);
+      assert(ps2_ee_execute_memory_word_arch_tlb(&cpu, &fault_mem,
+          &fault_tlb, lw) == PS2_EE_STEP_EXCEPTION);
+      assert(cpu.badvaddr == UINT32_C(0x20));
+      assert(((cpu.cause >> 2) & 31u) == PS2_EE_EXC_TLBL);
+
+      ps2_ee_reset(&cpu);
+      cpu.cp0_entry_hi = 3u;
+      cpu.gpr[1] = 0u;
+      cpu.gpr[2] = UINT32_C(0xfeed1234);
+      cpu.pc = UINT32_C(0x24);
+      assert(ps2_ee_execute_memory_word_arch_tlb(&cpu, &fault_mem,
+          &fault_tlb, sw) == PS2_EE_STEP_EXCEPTION);
+      assert(cpu.badvaddr == UINT32_C(0x20));
+      assert(((cpu.cause >> 2) & 31u) == PS2_EE_EXC_TLBS);
+    }
+
     /* COP0 CO-format TLB instructions must operate on the live machine TLB. */
     {
       ps2_ee_state_t cpu;

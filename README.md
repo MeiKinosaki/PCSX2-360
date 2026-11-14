@@ -21,6 +21,7 @@ O executável final obrigatório é **`build/default.xex`**. O arquivo ELF, quan
 - [x] Testes de regressão adicionados para TLB miss em leitura, acesso desalinhado e store em página somente leitura.
 - [x] Interface CP0 experimental para BadVAddr, Status, Cause e EPC.
 - [x] Decodificação parcial de MFC0/MTC0 e testes de transferência/máscaras de escrita.
+- [x] Tabela TLB experimental ampliada para 48 slots e teste do índice 47; o modelo ainda usa páginas fixas de 4 KiB, sem EntryLo par/PageMask arquitetural.
 - [x] Execução de `make check` confirmada por CI no commit `926b297` (antes da nova fatia CP0).
 - [ ] Toolchain Xenon configurada e `default.xex` compilado.
 - [ ] Inicialização comprovada em Xbox 360 RGH/JTAG.

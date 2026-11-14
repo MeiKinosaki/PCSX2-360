@@ -3,6 +3,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+struct ps2_ee_state;
+
 typedef struct ps2_ee_memory ps2_ee_memory_t;
 
 /* v0.90b: detailed translation status codes. */
@@ -145,4 +147,11 @@ int ps2_ee_tlb_arch_probe(const ps2_ee_tlb_arch_t *tlb,
 int ps2_ee_tlb_arch_translate(const ps2_ee_tlb_arch_t *tlb,
                               uint32_t virtual_address, int is_write,
                               uint32_t *physical_address);
+
+/* CP0/TLB management operations. PageMask is currently restricted to 4 KiB
+ * pages (zero); nonzero masks return ERR_UNSUPPORTED without mutating state. */
+int ps2_ee_cp0_tlbwi(struct ps2_ee_state *state, ps2_ee_tlb_arch_t *tlb);
+int ps2_ee_cp0_tlbwr(struct ps2_ee_state *state, ps2_ee_tlb_arch_t *tlb);
+int ps2_ee_cp0_tlbr(struct ps2_ee_state *state, const ps2_ee_tlb_arch_t *tlb);
+int ps2_ee_cp0_tlbp(struct ps2_ee_state *state, const ps2_ee_tlb_arch_t *tlb);
 #endif

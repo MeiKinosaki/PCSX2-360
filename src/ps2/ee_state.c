@@ -46,6 +46,8 @@ void ps2_ee_raise_exception_ex(ps2_ee_state_t *state, uint32_t fault_pc,
             (exc_code == PS2_EE_EXC_TLBL || exc_code == PS2_EE_EXC_TLBS))
             vector_offset = 0u;
     }
+    state->in_delay_slot = 0u;
+    state->branch_pc = 0u;
     state->status |= UINT32_C(0x2);
     vector_base = (state->status & UINT32_C(0x00400000)) != 0u
                 ? UINT32_C(0xBFC00200) : UINT32_C(0x80000000);

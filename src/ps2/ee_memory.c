@@ -536,7 +536,6 @@ int ps2_ee_cp0_tlbwr(struct ps2_ee_state *opaque_state, ps2_ee_tlb_arch_t *tlb)
     ps2_ee_state_t *state = (ps2_ee_state_t *)opaque_state;
     unsigned wired, random, status;
     if (state == 0 || tlb == 0) return PS2_EE_TLB_ERR_ARGUMENT;
-    if (!cp0_tlb_page_mode_supported(state)) return PS2_EE_TLB_ERR_UNSUPPORTED;
     wired = state->cp0_wired & UINT32_C(0x3f);
     if (wired > 47u) wired = 47u;
     random = state->cp0_random & UINT32_C(0x3f);

@@ -694,7 +694,25 @@ int main(void)
       cpu.gpr[1] = 0u;
       assert(ps2_ee_execute_memory_word_arch_tlb(&cpu, &code_mem, &code_tlb, lw) == PS2_EE_STEP_OK);
       assert((uint32_t)cpu.gpr[3] == UINT32_C(0x89abcdef));
-      /* A miss must populate BadVAddr and enter the TLB-load exception vector. */
+
+      /* Instruction fetch uses the same architectural paired-page TLB. */
+      ps2_ee_reset(&cpu);
+      cpu.cp0_entry_hi = 3u;
+      cpu.pc = UINT32_C(0x20);
+      cpu.next_pc = UINT32_C(0x24);
+      assert(ps2_ee_step_arch_tlb(&cpu, &code_mem, &code_tlb) == PS2_EE_STEP_OK);
+      assert(cpu.pc == UINT32_C(0x24));
+
+      /* Fetch miss must report the virtual PC in BadVAddr. */
+      ps2_ee_reset(&cpu);
+      cpu.cp0_entry_hi = 3u;
+      cpu.pc = UINT32_C(0x8000);
+      cpu.next_pc = UINT32_C(0x8004);
+      assert(ps2_ee_step_arch_tlb(&cpu, &code_mem, &code_tlb) == PS2_EE_STEP_EXCEPTION);
+      assert(cpu.badvaddr == UINT32_C(0x8000));
+      assert(((cpu.cause >> 2) & 31u) == PS2_EE_EXC_TLBL);
+
+      /* A data miss must populate BadVAddr and enter the TLB-load exception vector. */
       cpu.pc = UINT32_C(0x100);
       cpu.gpr[4] = UINT32_C(0x8000); /* outside the mapped 8 KiB TLB pair */
       assert(ps2_ee_execute_memory_word_arch_tlb(&cpu, &code_mem, &code_tlb,

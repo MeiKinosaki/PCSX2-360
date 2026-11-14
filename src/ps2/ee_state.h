@@ -28,6 +28,8 @@ typedef struct ps2_ee_state {
     uint64_t lo;
     uint32_t pc;
     uint32_t next_pc;
+    uint32_t branch_pc; /* Address of the control-transfer instruction owning the delay slot. */
+    uint8_t in_delay_slot;
     uint32_t cause;
     uint32_t status;
     uint32_t epc;

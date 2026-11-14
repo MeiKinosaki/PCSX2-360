@@ -504,6 +504,7 @@ int main(void)
     {
       ps2_ee_tlb_t tlb;
       ps2_ee_tlb_entry_t entry;
+      uint32_t physical = 0;
       ps2_ee_tlb_reset(&tlb);
       assert(PS2_EE_TLB_ENTRY_COUNT == 48);
       assert(ps2_ee_tlb_write(&tlb, 47u, UINT32_C(0x00ABC000),
@@ -511,7 +512,8 @@ int main(void)
       assert(ps2_ee_tlb_read(&tlb, 47u, &entry) == PS2_EE_TLB_OK);
       assert(entry.virtual_page == UINT32_C(0x00ABC000));
       assert(entry.physical_page == UINT32_C(0x00012000));
-      assert(ps2_ee_tlb_translate(&tlb, UINT32_C(0x00ABC123), 0, &loaded) == PS2_EE_TLB_OK);
+      assert(physical == UINT32_C(0x00012123));
+      assert(ps2_ee_tlb_translate(&tlb, UINT32_C(0x00ABC123), 0, &physical) == PS2_EE_TLB_OK);
     }
     puts("OK: EE helpers, decoder, TLB-backed step, scalar memory ops and arithmetic tests.");return 0;
 }

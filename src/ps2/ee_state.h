@@ -32,7 +32,7 @@ typedef struct ps2_ee_state {
     uint32_t status;
     uint32_t epc;
     uint32_t badvaddr; /* Experimental CP0.BadVAddr shadow for TLB/address faults. */
-    /* CP0 TLB-management register shadows; not yet wired to the TLB object. */
+    /* CP0 TLB-management registers used by the stateful COP0/TLB execution path. */
     uint32_t cp0_index;
     uint32_t cp0_random;
     uint32_t cp0_entry_lo0;

@@ -886,7 +886,7 @@ int main(void)
         cpu.next_pc = UINT32_C(0x30);
         cpu.in_delay_slot = 1u;
         cpu.branch_pc = UINT32_C(0x20);
-        cpu.gpr[1] = UINT64_C(0x7fffffffffffffff);
+        cpu.gpr[1] = UINT64_C(0x8000000000000000);
         cpu.gpr[2] = UINT64_C(1);
         assert(ps2_ee_execute_memory_word_arch_tlb(&cpu, &code_mem, &code_tlb, dsub)
             == PS2_EE_STEP_EXCEPTION);

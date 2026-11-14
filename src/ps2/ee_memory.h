@@ -110,4 +110,35 @@ int ps2_ee_mem_load_virtual_ex(ps2_ee_memory_t *mem, uint32_t virtual_address,
                                unsigned width, uint64_t *value);
 int ps2_ee_mem_store_virtual_ex(ps2_ee_memory_t *mem, uint32_t virtual_address,
                                 unsigned width, uint64_t value);
+/* Architectural-shape TLB model: 48 entries, each mapping an even/odd
+ * 4 KiB page pair through EntryHi and EntryLo0/1. PageMask is fixed at 4 KiB. */
+typedef struct ps2_ee_tlb_half {
+    uint32_t physical_page;
+    uint8_t valid;
+    uint8_t dirty;
+} ps2_ee_tlb_half_t;
+
+typedef struct ps2_ee_tlb_pair_entry {
+    uint32_t vpn2;
+    uint8_t asid;
+    uint8_t global;
+    uint8_t present;
+    ps2_ee_tlb_half_t even_page;
+    ps2_ee_tlb_half_t odd_page;
+} ps2_ee_tlb_pair_entry_t;
+
+typedef struct ps2_ee_tlb_arch {
+    ps2_ee_tlb_pair_entry_t entries[48];
+    uint8_t current_asid;
+} ps2_ee_tlb_arch_t;
+
+void ps2_ee_tlb_arch_reset(ps2_ee_tlb_arch_t *tlb);
+int ps2_ee_tlb_arch_write_indexed(ps2_ee_tlb_arch_t *tlb, unsigned index,
+                                  uint32_t entry_hi, uint32_t entry_lo0,
+                                  uint32_t entry_lo1);
+int ps2_ee_tlb_arch_probe(const ps2_ee_tlb_arch_t *tlb,
+                          uint32_t virtual_address, unsigned *index);
+int ps2_ee_tlb_arch_translate(const ps2_ee_tlb_arch_t *tlb,
+                              uint32_t virtual_address, int is_write,
+                              uint32_t *physical_address);
 #endif

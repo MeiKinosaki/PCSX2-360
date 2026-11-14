@@ -518,6 +518,37 @@ int ps2_ee_tlb_arch_translate(const ps2_ee_tlb_arch_t *tlb,
     return PS2_EE_TLB_OK;
 }
 
+/* Experimental access path using the architectural paired-page TLB.
+ * This deliberately remains separate from the legacy fixed-page TLB API. */
+int ps2_ee_mem_load_virtual_arch_tlb(ps2_ee_memory_t *m,
+                                     const ps2_ee_tlb_arch_t *tlb,
+                                     uint32_t virtual_address, unsigned width,
+                                     uint64_t *value)
+{
+    uint32_t physical_address;
+    int status;
+    if (m == 0 || m->ram == 0 || value == 0)
+        return PS2_EE_MEM_ERR_ARGUMENT;
+    status = ps2_ee_tlb_arch_translate(tlb, virtual_address, 0, &physical_address);
+    if (status != PS2_EE_TLB_OK) return PS2_EE_MEM_ERR_TRANSLATION;
+    return ps2_ee_mem_load(m, physical_address, width, value) == 0
+           ? PS2_EE_MEM_OK : PS2_EE_MEM_ERR_ACCESS;
+}
+
+int ps2_ee_mem_store_virtual_arch_tlb(ps2_ee_memory_t *m,
+                                      const ps2_ee_tlb_arch_t *tlb,
+                                      uint32_t virtual_address, unsigned width,
+                                      uint64_t value)
+{
+    uint32_t physical_address;
+    int status;
+    if (m == 0 || m->ram == 0) return PS2_EE_MEM_ERR_ARGUMENT;
+    status = ps2_ee_tlb_arch_translate(tlb, virtual_address, 1, &physical_address);
+    if (status != PS2_EE_TLB_OK) return PS2_EE_MEM_ERR_TRANSLATION;
+    return ps2_ee_mem_store(m, physical_address, width, value) == 0
+           ? PS2_EE_MEM_OK : PS2_EE_MEM_ERR_ACCESS;
+}
+
 int ps2_ee_cp0_tlbwi(struct ps2_ee_state *opaque_state, ps2_ee_tlb_arch_t *tlb)
 {
     ps2_ee_state_t *state = (ps2_ee_state_t *)opaque_state;

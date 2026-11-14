@@ -138,6 +138,34 @@ done:
     return PS2_EE_STEP_OK;
 }
 
+
+/* Execute COP0 operations that require the live architectural TLB object.
+ * This is the stateful EE execution entry point; plain execute_word remains
+ * available for instructions that do not need external machine devices. */
+ps2_ee_step_result_t ps2_ee_execute_word_arch_tlb(
+    ps2_ee_state_t *s, ps2_ee_tlb_arch_t *tlb, uint32_t insn)
+{
+    unsigned op, rs, function;
+    int status;
+    if (s == NULL || tlb == NULL) return PS2_EE_STEP_INVALID;
+    op = insn >> 26;
+    rs = (insn >> 21) & 31u;
+    function = insn & 63u;
+    if (op != 0x10u || rs != 16u)
+        return ps2_ee_execute_word(s, insn);
+    switch (function) {
+    case 0x01u: status = ps2_ee_cp0_tlbr(s, tlb); break; /* TLBR */
+    case 0x02u: status = ps2_ee_cp0_tlbwi(s, tlb); break; /* TLBWI */
+    case 0x06u: status = ps2_ee_cp0_tlbwr(s, tlb); break; /* TLBWR */
+    case 0x08u: status = ps2_ee_cp0_tlbp(s, tlb); break; /* TLBP */
+    default: return PS2_EE_STEP_UNSUPPORTED;
+    }
+    s->gpr[0] = 0;
+    if (status == PS2_EE_TLB_OK) return PS2_EE_STEP_OK;
+    if (status == PS2_EE_TLB_ERR_ARGUMENT) return PS2_EE_STEP_INVALID;
+    return PS2_EE_STEP_UNSUPPORTED;
+}
+
 ps2_ee_step_result_t ps2_ee_execute_memory_word(ps2_ee_state_t *s, ps2_ee_memory_t *mem, uint32_t insn)
 {
     unsigned op,rs,rt,width=0; uint32_t address; uint64_t value; int store=0,sign_extend=0;
@@ -207,7 +235,7 @@ ps2_ee_step_result_t ps2_ee_execute_memory_word_tlb(ps2_ee_state_t *s,
     case 0x29: width = 2; store = 1; break;
     case 0x2b: width = 4; store = 1; break;
     case 0x3f: width = 8; store = 1; break;
-    default: return ps2_ee_execute_word(s, insn);
+    default: return ps2_ee_execute_word_arch_tlb(s, tlb, insn);
     }
     address = (uint32_t)s->gpr[rs] + (uint32_t)(int32_t)(int16_t)insn;
     if ((address & (uint32_t)(width - 1u)) != 0u) {
@@ -288,7 +316,7 @@ ps2_ee_step_result_t ps2_ee_step_tlb(ps2_ee_state_t *s, ps2_ee_memory_t *mem,
  * precision are intentionally not claimed by this prototype. */
 ps2_ee_step_result_t ps2_ee_execute_memory_word_arch_tlb(
     ps2_ee_state_t *s, ps2_ee_memory_t *mem,
-    const ps2_ee_tlb_arch_t *tlb, uint32_t insn)
+    ps2_ee_tlb_arch_t *tlb, uint32_t insn)
 {
     unsigned op, rs, rt, width = 0;
     uint32_t address, physical = 0;

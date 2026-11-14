@@ -535,12 +535,15 @@ int ps2_ee_cp0_tlbr(struct ps2_ee_state *opaque_state, const ps2_ee_tlb_arch_t *
 int ps2_ee_cp0_tlbp(struct ps2_ee_state *opaque_state, const ps2_ee_tlb_arch_t *tlb)
 {
     ps2_ee_state_t *state = (ps2_ee_state_t *)opaque_state;
+    ps2_ee_tlb_arch_t lookup;
     unsigned index;
     int status;
     if (state == 0 || tlb == 0) return PS2_EE_TLB_ERR_ARGUMENT;
     if (!cp0_tlb_page_mode_supported(state)) return PS2_EE_TLB_ERR_UNSUPPORTED;
-    /* EntryHi supplies the VPN and ASID; use its virtual page-pair base. */
-    status = ps2_ee_tlb_arch_probe(tlb, state->cp0_entry_hi & UINT32_C(0xffffe000),
+    /* EntryHi supplies both the VPN and ASID; don't rely on a stale external ASID. */
+    lookup = *tlb;
+    lookup.current_asid = (uint8_t)(state->cp0_entry_hi & UINT32_C(0xff));
+    status = ps2_ee_tlb_arch_probe(&lookup, state->cp0_entry_hi & UINT32_C(0xffffe000),
                                    &index);
     if (status == PS2_EE_TLB_OK) {
         state->cp0_index = index;

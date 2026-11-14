@@ -17,6 +17,8 @@ O executável final obrigatório é **`build/default.xex`**. O arquivo ELF, quan
 - [x] Aviso de licença MIT original preservado em `LICENSES/PS2Palace360-MIT.txt`.
 - [x] Makefile inicial com alvo `make xex` que entrega `build/default.xex`.
 - [x] Workflow de regressão host e workflow manual para runner Xenon self-hosted.
+- [x] Primeira rota de exceções para falhas de dados do EE: TLB miss, Modified, ADEL, ADES e DBE no caminho experimental.
+- [x] Testes de regressão adicionados para TLB miss em leitura, acesso desalinhado e store em página somente leitura.
 - [ ] Execução de `make check` neste repositório confirmada por CI.
 - [ ] Toolchain Xenon configurada e `default.xex` compilado.
 - [ ] Inicialização comprovada em Xbox 360 RGH/JTAG.

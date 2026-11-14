@@ -512,8 +512,10 @@ int main(void)
       assert(ps2_ee_tlb_read(&tlb, 47u, &entry) == PS2_EE_TLB_OK);
       assert(entry.virtual_page == UINT32_C(0x00ABC000));
       assert(entry.physical_page == UINT32_C(0x00012000));
-      assert(physical == UINT32_C(0x00012123));
+      /* The output is written only after a successful translation. */
+      assert(physical == 0u);
       assert(ps2_ee_tlb_translate(&tlb, UINT32_C(0x00ABC123), 0, &physical) == PS2_EE_TLB_OK);
+      assert(physical == UINT32_C(0x00012123));
     }
     puts("OK: EE helpers, decoder, TLB-backed step, scalar memory ops and arithmetic tests.");return 0;
 }

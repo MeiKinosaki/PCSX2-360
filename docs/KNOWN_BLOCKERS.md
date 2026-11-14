@@ -15,7 +15,7 @@ Este documento separa o que já existe no repositório do que ainda impede uma b
 
 ## Biblioteca e interface
 - Existe apenas o modelo de dados da biblioteca; ainda não há scanner real de ISO/CSO/CHD nem leitura de USB/HDD.
-- Favoritos ainda não são persistidos em armazenamento.
+- O modelo de biblioteca agora tem serialização versionada/checksum para favoritos e metadados, mas ainda não há integração com arquivo/dispositivo de armazenamento persistente no runtime.
 - Os caminhos de capa são metadados; não há renderização de capas nem interface Aurora/Xbox 360.
 - Download de capas depende de rede Xbox 360, HTTP/TLS, armazenamento e fonte de metadados; nada disso está integrado.
 - A tela de abertura PS2 e o áudio não estão implementados. A música original do BIOS não deve ser redistribuída; a implementação deve depender de conteúdo fornecido legalmente pelo usuário ou de áudio original.

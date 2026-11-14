@@ -32,7 +32,7 @@ typedef struct ps2_ee_tlb_entry {
 } ps2_ee_tlb_entry_t;
 
 enum {
-    PS2_EE_TLB_ENTRY_COUNT = 16,
+    PS2_EE_TLB_ENTRY_COUNT = 48,
     PS2_EE_TLB_PAGE_SHIFT = 12,
     PS2_EE_TLB_PAGE_SIZE = 4096
 };

@@ -400,8 +400,16 @@ void ps2_ee_tlb_arch_reset(ps2_ee_tlb_arch_t *tlb)
 static int tlb_page_mask_valid(uint32_t page_mask)
 {
     uint32_t m = (page_mask & UINT32_C(0x01ffe000)) >> 13;
+    /* R5900 supports 4 KiB, 16 KiB, 64 KiB, 256 KiB, 1 MiB,
+     * 4 MiB and 16 MiB pages: the PageMask run has 0, 2, 4, ... 12 bits. */
     if ((page_mask & ~UINT32_C(0x01ffe000)) != 0u) return 0;
-    return (m & (m + 1u)) == 0u;
+    switch (m) {
+    case 0x000u: case 0x003u: case 0x00fu: case 0x03fu:
+    case 0x0ffu: case 0x3ffu: case 0xfffu:
+        return 1;
+    default:
+        return 0;
+    }
 }
 
 static uint32_t tlb_pair_compare_mask(uint32_t page_mask)

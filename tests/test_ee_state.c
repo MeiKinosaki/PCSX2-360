@@ -722,6 +722,9 @@ int main(void)
       assert(cpu.badvaddr == UINT32_C(0x21));
       assert(((cpu.cause >> 2) & 31u) == PS2_EE_EXC_ADEL);
 
+      /* Keep exception scenarios independent: ADEL above set EXL. */
+      ps2_ee_reset(&cpu);
+
       /* A data miss must populate BadVAddr and enter the TLB-load exception vector. */
       cpu.pc = UINT32_C(0x100);
       cpu.gpr[4] = UINT32_C(0x8000); /* outside the mapped 8 KiB TLB pair */

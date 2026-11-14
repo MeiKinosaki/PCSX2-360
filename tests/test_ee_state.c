@@ -1033,5 +1033,40 @@ int main(void)
       assert(ps2_ee_state_load(&restored, snapshot, written) == -5);
       assert(restored.pc == original.pc);
     }
-    puts("OK: EE helpers, decoder, TLB-backed step, scalar memory ops, arithmetic and snapshot tests.");return 0;
+
+    /* Combined machine snapshot restores EE state, architectural TLB and RAM atomically. */
+    {
+      ps2_ee_state_t saved, loaded;
+      ps2_ee_tlb_arch_t saved_tlb, loaded_tlb;
+      uint8_t machine_blob[16u + sizeof(ps2_ee_state_t) + sizeof(ps2_ee_tlb_arch_t) + 4u + sizeof(ram)];
+      size_t blob_size = 0u;
+      uint32_t eh = UINT32_C(0x0012302a);
+      ps2_ee_reset(&saved);
+      ps2_ee_tlb_arch_reset(&saved_tlb);
+      assert(ps2_ee_tlb_arch_write_indexed(&saved_tlb, 3u, eh,
+             (UINT32_C(0x31) << 6) | 7u, (UINT32_C(0x32) << 6) | 7u) == PS2_EE_TLB_OK);
+      saved.pc = UINT32_C(0x00101000);
+      saved.gpr[5] = UINT64_C(0xabcdef0123456789);
+      ram[9] = UINT8_C(0x5a);
+      assert(ps2_ee_machine_snapshot_save(&saved, &saved_tlb, &mem, machine_blob,
+             sizeof(machine_blob), &blob_size) == 0);
+      ps2_ee_reset(&loaded);
+      ps2_ee_tlb_arch_reset(&loaded_tlb);
+      ram[9] = 0u;
+      assert(ps2_ee_machine_snapshot_load(&loaded, &loaded_tlb, &mem,
+             machine_blob, blob_size) == 0);
+      assert(loaded.pc == saved.pc && loaded.gpr[5] == saved.gpr[5]);
+      assert(ram[9] == UINT8_C(0x5a));
+      {
+        uint32_t out_hi = 0u, out_lo0 = 0u, out_lo1 = 0u;
+        assert(ps2_ee_tlb_arch_read_indexed(&loaded_tlb, 3u, &out_hi, &out_lo0, &out_lo1) == PS2_EE_TLB_OK);
+        assert(out_hi == eh);
+      }
+      machine_blob[blob_size - 1u] ^= 1u;
+      ram[9] = UINT8_C(0x77);
+      assert(ps2_ee_machine_snapshot_load(&loaded, &loaded_tlb, &mem,
+             machine_blob, blob_size) == -5);
+      assert(ram[9] == UINT8_C(0x77));
+    }
+    puts("OK: EE helpers, decoder, TLB-backed step, arithmetic and machine snapshot tests.");return 0;
 }

@@ -394,14 +394,33 @@ void ps2_ee_tlb_arch_reset(ps2_ee_tlb_arch_t *tlb)
     memset(tlb, 0, sizeof(*tlb));
 }
 
-int ps2_ee_tlb_arch_write_indexed(ps2_ee_tlb_arch_t *tlb, unsigned index,
-                                  uint32_t entry_hi, uint32_t entry_lo0,
-                                  uint32_t entry_lo1)
+/* PageMask follows the paired-page R5900 encoding. The mask field is
+ * validated as contiguous pairs of 4 KiB pages; unsupported encodings fail
+ * explicitly rather than silently aliasing addresses. */
+static int tlb_page_mask_valid(uint32_t page_mask)
+{
+    uint32_t m = (page_mask & UINT32_C(0x01ffe000)) >> 13;
+    if ((page_mask & ~UINT32_C(0x01ffe000)) != 0u) return 0;
+    return (m & (m + 1u)) == 0u;
+}
+
+static uint32_t tlb_pair_compare_mask(uint32_t page_mask)
+{
+    return ~(page_mask | UINT32_C(0x1fff));
+}
+
+int ps2_ee_tlb_arch_write_indexed_masked(ps2_ee_tlb_arch_t *tlb, unsigned index,
+                                         uint32_t entry_hi, uint32_t entry_lo0,
+                                         uint32_t entry_lo1, uint32_t page_mask)
 {
     ps2_ee_tlb_pair_entry_t *entry;
-    if (tlb == 0 || index >= 48u) return PS2_EE_TLB_ERR_ARGUMENT;
+    uint32_t pair_mask;
+    if (tlb == 0 || index >= 48u || !tlb_page_mask_valid(page_mask))
+        return page_mask == 0u ? PS2_EE_TLB_ERR_ARGUMENT : PS2_EE_TLB_ERR_UNSUPPORTED;
+    pair_mask = tlb_pair_compare_mask(page_mask);
     entry = &tlb->entries[index];
-    entry->vpn2 = entry_hi & UINT32_C(0xffffe000);
+    entry->page_mask = page_mask;
+    entry->vpn2 = entry_hi & pair_mask;
     entry->asid = (uint8_t)(entry_hi & UINT32_C(0xff));
     entry->even_page = decode_entry_lo(entry_lo0);
     entry->odd_page = decode_entry_lo(entry_lo1);
@@ -411,14 +430,21 @@ int ps2_ee_tlb_arch_write_indexed(ps2_ee_tlb_arch_t *tlb, unsigned index,
     return PS2_EE_TLB_OK;
 }
 
+int ps2_ee_tlb_arch_write_indexed(ps2_ee_tlb_arch_t *tlb, unsigned index,
+                                  uint32_t entry_hi, uint32_t entry_lo0,
+                                  uint32_t entry_lo1)
+{
+    return ps2_ee_tlb_arch_write_indexed_masked(tlb, index, entry_hi,
+                                                entry_lo0, entry_lo1, 0u);
+}
 
-int ps2_ee_tlb_arch_read_indexed(const ps2_ee_tlb_arch_t *tlb, unsigned index,
-                                 uint32_t *entry_hi, uint32_t *entry_lo0,
-                                 uint32_t *entry_lo1)
+int ps2_ee_tlb_arch_read_indexed_masked(const ps2_ee_tlb_arch_t *tlb, unsigned index,
+                                        uint32_t *entry_hi, uint32_t *entry_lo0,
+                                        uint32_t *entry_lo1, uint32_t *page_mask)
 {
     const ps2_ee_tlb_pair_entry_t *entry;
     if (tlb == 0 || index >= 48u || entry_hi == 0 ||
-        entry_lo0 == 0 || entry_lo1 == 0)
+        entry_lo0 == 0 || entry_lo1 == 0 || page_mask == 0)
         return PS2_EE_TLB_ERR_ARGUMENT;
     entry = &tlb->entries[index];
     if (!entry->present) return PS2_EE_TLB_ERR_MISS;
@@ -431,19 +457,31 @@ int ps2_ee_tlb_arch_read_indexed(const ps2_ee_tlb_arch_t *tlb, unsigned index,
                  ((uint32_t)entry->odd_page.dirty << 2) |
                  ((uint32_t)entry->odd_page.valid << 1) |
                  (uint32_t)entry->odd_page.global;
+    *page_mask = entry->page_mask;
     return PS2_EE_TLB_OK;
+}
+
+int ps2_ee_tlb_arch_read_indexed(const ps2_ee_tlb_arch_t *tlb, unsigned index,
+                                 uint32_t *entry_hi, uint32_t *entry_lo0,
+                                 uint32_t *entry_lo1)
+{
+    uint32_t ignored_mask;
+    return ps2_ee_tlb_arch_read_indexed_masked(tlb, index, entry_hi,
+                                               entry_lo0, entry_lo1,
+                                               &ignored_mask);
 }
 
 int ps2_ee_tlb_arch_probe(const ps2_ee_tlb_arch_t *tlb,
                           uint32_t virtual_address, unsigned *index)
 {
-    uint32_t vpn2;
     unsigned i, matches = 0, found = 0;
     if (tlb == 0 || index == 0) return PS2_EE_TLB_ERR_ARGUMENT;
-    vpn2 = virtual_address & UINT32_C(0xffffe000);
     for (i = 0; i < 48u; ++i) {
         const ps2_ee_tlb_pair_entry_t *entry = &tlb->entries[i];
-        if (!entry->present || entry->vpn2 != vpn2 ||
+        uint32_t compare_mask;
+        if (!entry->present) continue;
+        compare_mask = tlb_pair_compare_mask(entry->page_mask);
+        if ((entry->vpn2 & compare_mask) != (virtual_address & compare_mask) ||
             (!entry->global && entry->asid != tlb->current_asid))
             continue;
         found = i;
@@ -460,7 +498,7 @@ int ps2_ee_tlb_arch_translate(const ps2_ee_tlb_arch_t *tlb,
                               uint32_t *physical_address)
 {
     unsigned index;
-    uint32_t offset = virtual_address & UINT32_C(0xfff);
+    uint32_t pair_offset, page_size, page_offset, physical_base;
     const ps2_ee_tlb_pair_entry_t *entry;
     const ps2_ee_tlb_half_t *half;
     int status;
@@ -468,19 +506,16 @@ int ps2_ee_tlb_arch_translate(const ps2_ee_tlb_arch_t *tlb,
     status = ps2_ee_tlb_arch_probe(tlb, virtual_address, &index);
     if (status != PS2_EE_TLB_OK) return status;
     entry = &tlb->entries[index];
-    half = (virtual_address & UINT32_C(0x1000)) != 0u
-         ? &entry->odd_page : &entry->even_page;
+    page_size = ((entry->page_mask | UINT32_C(0x1fff)) + 1u) >> 1;
+    if (page_size < UINT32_C(0x1000)) return PS2_EE_TLB_ERR_UNSUPPORTED;
+    pair_offset = virtual_address & (page_size * 2u - 1u);
+    half = (pair_offset & page_size) != 0u ? &entry->odd_page : &entry->even_page;
     if (!half->valid) return PS2_EE_TLB_ERR_INVALID;
     if (is_write && !half->dirty) return PS2_EE_TLB_ERR_MODIFIED;
-    *physical_address = half->physical_page | offset;
+    page_offset = pair_offset & (page_size - 1u);
+    physical_base = half->physical_page & ~(page_size - 1u);
+    *physical_address = physical_base | page_offset;
     return PS2_EE_TLB_OK;
-}
-
-/* CP0 operations now manipulate the same 48-pair table used by translation.
- * This first integration deliberately supports only the existing 4 KiB mode. */
-static int cp0_tlb_page_mode_supported(const ps2_ee_state_t *state)
-{
-    return state != 0 && state->cp0_page_mask == 0u;
 }
 
 int ps2_ee_cp0_tlbwi(struct ps2_ee_state *opaque_state, ps2_ee_tlb_arch_t *tlb)

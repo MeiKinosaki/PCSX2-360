@@ -51,6 +51,33 @@ int main(void)
     assert(pcsx2_game_library_filter(&library, &filter, indices, 1u) == 2u);
     assert(indices[0] == 0u);
     assert(pcsx2_game_library_filter(NULL, &filter, indices, 1u) == 0u);
-    puts("OK: game library add, duplicate protection, favorites and filters.");
+    /* Reject malformed fixed-size strings without a terminator. */
+    {
+        pcsx2_game_entry_t malformed;
+        memset(&malformed, 'X', sizeof(malformed));
+        assert(pcsx2_game_library_add(&library, &malformed) == -1);
+    }
+
+    /* Enforce the fixed library capacity without writing out of bounds. */
+    {
+        pcsx2_game_library_t full;
+        pcsx2_game_entry_t item;
+        unsigned int n;
+        pcsx2_game_library_init(&full);
+        for (n = 0; n < PCSX2_GAME_LIBRARY_MAX; ++n) {
+            char title[PCSX2_GAME_TITLE_MAX];
+            char serial[PCSX2_GAME_SERIAL_MAX];
+            (void)snprintf(title, sizeof(title), "Game %u", n);
+            (void)snprintf(serial, sizeof(serial), "S%05u", n);
+            item = game(title, serial, "Test", "");
+            assert(pcsx2_game_library_add(&full, &item) == 0);
+        }
+        item = game("Overflow", "OVERFLOW", "Test", "");
+        assert(full.count == PCSX2_GAME_LIBRARY_MAX);
+        assert(pcsx2_game_library_add(&full, &item) == -3);
+        assert(full.count == PCSX2_GAME_LIBRARY_MAX);
+    }
+
+    puts("OK: game library add, duplicate protection, favorites, filters and bounds.");
     return 0;
 }

@@ -18,12 +18,12 @@ int main(void)
         ps2_ee_state_t ex;
         uint32_t cp0_value = 0;
         ps2_ee_reset(&ex);
-        ex.cp0_context = UINT32_C(0xabc00000);
+        ex.cp0_context = UINT32_C(0xab800000);
         ex.cp0_entry_hi = UINT32_C(0x0000005a);
         ex.badvaddr = UINT32_C(0x12345678);
         ps2_ee_raise_exception(&ex, UINT32_C(0x1000), PS2_EE_EXC_TLBL, 0);
         assert(ex.badvaddr == UINT32_C(0x12345678));
-        assert((ex.cp0_context & UINT32_C(0xff800000)) == UINT32_C(0xabc00000));
+        assert((ex.cp0_context & UINT32_C(0xff800000)) == UINT32_C(0xab800000));
         assert((ex.cp0_context & UINT32_C(0x007ffff0)) ==
                ((UINT32_C(0x12345678) >> 9) & UINT32_C(0x007ffff0)));
         assert((ex.cp0_entry_hi & UINT32_C(0xff)) == UINT32_C(0x5a));

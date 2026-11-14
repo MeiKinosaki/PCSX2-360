@@ -12,6 +12,26 @@ int main(void)
 {
     ps2_ee_state_t s; uint8_t ram[64]={0}; ps2_ee_memory_t mem={ram,sizeof ram}; uint64_t loaded=0;
     ps2_ee_reset(&s); assert(s.pc==UINT32_C(0xBFC00000)&&s.next_pc==UINT32_C(0xBFC00004)); assert(s.gpr[0]==0);
+    /* TLB address faults update BadVAddr, Context.BadVPN2 and EntryHi.VPN2,
+       while preserving Context.PTEBase and EntryHi.ASID. */
+    {
+        ps2_ee_state_t ex;
+        uint32_t cp0_value = 0;
+        ps2_ee_reset(&ex);
+        ex.cp0_context = UINT32_C(0xabc00000);
+        ex.cp0_entry_hi = UINT32_C(0x0000005a);
+        ps2_ee_raise_exception(&ex, UINT32_C(0x12345678), PS2_EE_EXC_TLBL, 0);
+        assert(ex.badvaddr == UINT32_C(0x12345678));
+        assert((ex.cp0_context & UINT32_C(0xff800000)) == UINT32_C(0xabc00000));
+        assert((ex.cp0_context & UINT32_C(0x007ffff0)) ==
+               ((UINT32_C(0x12345678) >> 9) & UINT32_C(0x007ffff0)));
+        assert((ex.cp0_entry_hi & UINT32_C(0xff)) == UINT32_C(0x5a));
+        assert((ex.cp0_entry_hi & UINT32_C(0xffffe000)) ==
+               (UINT32_C(0x12345678) & UINT32_C(0xffffe000)));
+        assert(ps2_ee_cp0_read(&ex, 4u, 0u, &cp0_value) == 0);
+        assert(cp0_value == ex.cp0_context);
+    }
+
     /* R5900 TLB refill exceptions use the refill vector, while ADEL uses
        the general vector. BEV selects the bootstrap vector base. */
     {

@@ -696,9 +696,10 @@ int main(void)
       assert((uint32_t)cpu.gpr[3] == UINT32_C(0x89abcdef));
       /* A miss must populate BadVAddr and enter the TLB-load exception vector. */
       cpu.pc = UINT32_C(0x100);
+      cpu.gpr[4] = UINT32_C(0x8000); /* outside the mapped 8 KiB TLB pair */
       assert(ps2_ee_execute_memory_word_arch_tlb(&cpu, &code_mem, &code_tlb,
           (UINT32_C(0x23) << 26) | (4u << 21) | (5u << 16)) == PS2_EE_STEP_EXCEPTION);
-      assert(cpu.badvaddr == 0u);
+      assert(cpu.badvaddr == UINT32_C(0x8000));
       assert(((cpu.cause >> 2) & 31u) == PS2_EE_EXC_TLBL);
     }
     puts("OK: EE helpers, decoder, TLB-backed step, scalar memory ops and arithmetic tests.");return 0;

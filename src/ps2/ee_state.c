@@ -35,6 +35,39 @@ void ps2_ee_raise_exception(ps2_ee_state_t *state, uint32_t fault_pc,
     state->gpr[0] = 0;
 }
 
+int ps2_ee_cp0_read(const ps2_ee_state_t *state, unsigned reg, unsigned sel, uint32_t *value)
+{
+    if (state == NULL || value == NULL || sel != 0u) return -1;
+    switch (reg) {
+    case 8u:  *value = state->badvaddr; return 0;
+    case 12u: *value = state->status; return 0;
+    case 13u: *value = state->cause; return 0;
+    case 14u: *value = state->epc; return 0;
+    default: return -2;
+    }
+}
+
+int ps2_ee_cp0_write(ps2_ee_state_t *state, unsigned reg, unsigned sel, uint32_t value)
+{
+    if (state == NULL || sel != 0u) return -1;
+    switch (reg) {
+    case 12u:
+        /* This prototype models IE, EXL, ERL and BEV only; other Status bits
+         * remain untouched until interrupt-mask and privilege logic exists. */
+        state->status = (state->status & ~UINT32_C(0x00400007)) |
+                        (value & UINT32_C(0x00400007));
+        return 0;
+    case 13u:
+        /* Software interrupt pending bits are writable; ExcCode/BD are not. */
+        state->cause = (state->cause & ~UINT32_C(0x00000300)) |
+                       (value & UINT32_C(0x00000300));
+        return 0;
+    case 14u: state->epc = value; return 0;
+    case 8u:  return -3; /* BadVAddr is read-only. */
+    default: return -2;
+    }
+}
+
 int ps2_ee_add32(ps2_ee_state_t *state, unsigned rd,
                  unsigned rs, unsigned rt)
 {

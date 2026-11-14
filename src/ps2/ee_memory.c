@@ -383,6 +383,7 @@ static ps2_ee_tlb_half_t decode_entry_lo(uint32_t entry_lo)
     half.physical_page = (entry_lo & UINT32_C(0x03ffffc0)) << 6;
     half.valid = (uint8_t)((entry_lo >> 1) & 1u);
     half.dirty = (uint8_t)((entry_lo >> 2) & 1u);
+    half.global = (uint8_t)(entry_lo & 1u);
     return half;
 }
 
@@ -424,11 +425,11 @@ int ps2_ee_tlb_arch_read_indexed(const ps2_ee_tlb_arch_t *tlb, unsigned index,
     *entry_lo0 = ((entry->even_page.physical_page >> 12) << 6) |
                  ((uint32_t)entry->even_page.dirty << 2) |
                  ((uint32_t)entry->even_page.valid << 1) |
-                 (uint32_t)entry->global;
+                 (uint32_t)entry->even_page.global;
     *entry_lo1 = ((entry->odd_page.physical_page >> 12) << 6) |
                  ((uint32_t)entry->odd_page.dirty << 2) |
                  ((uint32_t)entry->odd_page.valid << 1) |
-                 (uint32_t)entry->global;
+                 (uint32_t)entry->odd_page.global;
     return PS2_EE_TLB_OK;
 }
 

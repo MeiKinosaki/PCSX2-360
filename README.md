@@ -34,7 +34,7 @@ O executável final obrigatório é **`build/default.xex`**. O arquivo ELF, quan
 - [x] Testes host para TLB pareada, ASID, permissões, busca sem correspondência, round-trip CP0/TLB, TLBWR e PageMask.
 - [x] Regressão host `make check` aprovada no CI do commit `933a44c` (run `43626390249`).
 - [ ] Auditoria diferencial completa da semântica R5900, incluindo PageMask, PFN, delay slots e exceções.
-- [x] Primeira infraestrutura experimental de snapshot EE com cabeçalho versionado, tamanho e checksum; round-trip e rejeição de corrupção adicionados aos testes, aguardando CI. Snapshot atual é ABI local do build e ainda não inclui RAM, TLB/dispositivos completos nem persistência em arquivo no runtime.
+- [x] Snapshot experimental de máquina: estado EE + TLB arquitetural de 48 entradas + RAM, cabeçalho versionado, tamanho e checksum; testes de round-trip e corrupção adicionados. Ainda é ABI local do build, exige RAM de mesmo tamanho e não inclui IOP/DMA/VU/GS nem persistência integrada ao runtime.
 - [ ] Integração de todas as instruções de memória e fetch no caminho principal da CPU.
 - [ ] Toolchain Xenon configurada e `default.xex` compilado.
 - [ ] Inicialização comprovada em Xbox 360 RGH/JTAG.

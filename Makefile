@@ -9,6 +9,7 @@ EE_SOURCES := src/ps2/ee_state.c src/ps2/ee_ops.c src/ps2/ee_immediate.c \
               src/ps2/ee_compare.c src/ps2/ee_decode.c src/ps2/ee_memory.c \
               src/ps2/ee_state_io.c
 HOST_TEST := $(BUILD_DIR)/test_ee_state
+LIBRARY_TEST := $(BUILD_DIR)/test_game_library
 
 .PHONY: all check validate test-host toolchain-check xex clean
 all: check
@@ -19,14 +20,18 @@ $(BUILD_DIR):
 $(HOST_TEST): $(EE_SOURCES) tests/test_ee_state.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -Isrc/ps2 $(EE_SOURCES) tests/test_ee_state.c -o $@
 
+$(LIBRARY_TEST): src/frontend/game_library.c src/frontend/game_library.h tests/test_game_library.c | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -Isrc/frontend src/frontend/game_library.c tests/test_game_library.c -o $@
+
 validate:
 	@test -s src/main.c
 	@test -s tests/test_ee_state.c
 	@for f in $(EE_SOURCES); do test -s $$f || exit 2; done
 	@echo "OK: fontes-base do EE encontradas."
 
-test-host: $(HOST_TEST)
+test-host: $(HOST_TEST) $(LIBRARY_TEST)
 	./$(HOST_TEST)
+	./$(LIBRARY_TEST)
 
 check: validate test-host
 

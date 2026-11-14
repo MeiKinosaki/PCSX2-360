@@ -371,3 +371,80 @@ unsigned ps2_ee_tlb_count_matches(const ps2_ee_tlb_t *tlb, uint32_t virtual_addr
     }
     return count;
 }
+
+/* Architectural-shape R5900 TLB model. This is deliberately separate from
+ * the earlier one-page-per-slot prototype so the 48 hardware slots each
+ * hold an even/odd 4 KiB page pair. PageMask variants are not implemented. */
+static ps2_ee_tlb_half_t decode_entry_lo(uint32_t entry_lo)
+{
+    ps2_ee_tlb_half_t half;
+    half.physical_page = (entry_lo & UINT32_C(0x03ffffc0)) << 6;
+    half.valid = (uint8_t)((entry_lo >> 1) & 1u);
+    half.dirty = (uint8_t)((entry_lo >> 2) & 1u);
+    return half;
+}
+
+void ps2_ee_tlb_arch_reset(ps2_ee_tlb_arch_t *tlb)
+{
+    if (tlb == 0) return;
+    memset(tlb, 0, sizeof(*tlb));
+}
+
+int ps2_ee_tlb_arch_write_indexed(ps2_ee_tlb_arch_t *tlb, unsigned index,
+                                  uint32_t entry_hi, uint32_t entry_lo0,
+                                  uint32_t entry_lo1)
+{
+    ps2_ee_tlb_pair_entry_t *entry;
+    if (tlb == 0 || index >= 48u) return PS2_EE_TLB_ERR_ARGUMENT;
+    entry = &tlb->entries[index];
+    entry->vpn2 = entry_hi & UINT32_C(0xffffe000);
+    entry->asid = (uint8_t)(entry_hi & UINT32_C(0xff));
+    entry->even_page = decode_entry_lo(entry_lo0);
+    entry->odd_page = decode_entry_lo(entry_lo1);
+    entry->global = (uint8_t)(((entry_lo0 & 1u) != 0u) &&
+                              ((entry_lo1 & 1u) != 0u));
+    entry->present = 1;
+    return PS2_EE_TLB_OK;
+}
+
+int ps2_ee_tlb_arch_probe(const ps2_ee_tlb_arch_t *tlb,
+                          uint32_t virtual_address, unsigned *index)
+{
+    uint32_t vpn2;
+    unsigned i, matches = 0, found = 0;
+    if (tlb == 0 || index == 0) return PS2_EE_TLB_ERR_ARGUMENT;
+    vpn2 = virtual_address & UINT32_C(0xffffe000);
+    for (i = 0; i < 48u; ++i) {
+        const ps2_ee_tlb_pair_entry_t *entry = &tlb->entries[i];
+        if (!entry->present || entry->vpn2 != vpn2 ||
+            (!entry->global && entry->asid != tlb->current_asid))
+            continue;
+        found = i;
+        ++matches;
+    }
+    if (matches > 1u) return PS2_EE_TLB_ERR_MULTIPLE;
+    if (matches == 0u) return PS2_EE_TLB_ERR_MISS;
+    *index = found;
+    return PS2_EE_TLB_OK;
+}
+
+int ps2_ee_tlb_arch_translate(const ps2_ee_tlb_arch_t *tlb,
+                              uint32_t virtual_address, int is_write,
+                              uint32_t *physical_address)
+{
+    unsigned index;
+    uint32_t offset = virtual_address & UINT32_C(0xfff);
+    const ps2_ee_tlb_pair_entry_t *entry;
+    const ps2_ee_tlb_half_t *half;
+    int status;
+    if (physical_address == 0) return PS2_EE_TLB_ERR_ARGUMENT;
+    status = ps2_ee_tlb_arch_probe(tlb, virtual_address, &index);
+    if (status != PS2_EE_TLB_OK) return status;
+    entry = &tlb->entries[index];
+    half = (virtual_address & UINT32_C(0x1000)) != 0u
+         ? &entry->odd_page : &entry->even_page;
+    if (!half->valid) return PS2_EE_TLB_ERR_INVALID;
+    if (is_write && !half->dirty) return PS2_EE_TLB_ERR_MODIFIED;
+    *physical_address = half->physical_page | offset;
+    return PS2_EE_TLB_OK;
+}

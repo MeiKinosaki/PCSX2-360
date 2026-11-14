@@ -24,6 +24,16 @@ void ps2_ee_raise_exception(ps2_ee_state_t *state, uint32_t fault_pc,
     int already_exl;
     if (state == NULL) return;
     already_exl = (state->status & UINT32_C(0x2)) != 0u;
+    if (exc_code == PS2_EE_EXC_TLBL || exc_code == PS2_EE_EXC_TLBS ||
+        exc_code == PS2_EE_EXC_MOD) {
+        /* Context.BadVPN2 and EntryHi.VPN2 are updated by address faults;
+           preserve the software-managed PTEBase and ASID fields. */
+        state->badvaddr = fault_pc;
+        state->cp0_context = (state->cp0_context & UINT32_C(0xff800000)) |
+                             ((fault_pc >> 9) & UINT32_C(0x007ffff0));
+        state->cp0_entry_hi = (state->cp0_entry_hi & UINT32_C(0x000000ff)) |
+                              (fault_pc & UINT32_C(0xffffe000));
+    }
     if (!already_exl) {
         state->epc = in_delay_slot ? fault_pc - UINT32_C(4) : fault_pc;
         state->cause &= ~UINT32_C(0x8000007c);
@@ -51,6 +61,7 @@ int ps2_ee_cp0_read(const ps2_ee_state_t *state, unsigned reg, unsigned sel, uin
     case 1u:  *value = state->cp0_random; return 0;
     case 2u:  *value = state->cp0_entry_lo0; return 0;
     case 3u:  *value = state->cp0_entry_lo1; return 0;
+    case 4u:  *value = state->cp0_context; return 0;
     case 5u:  *value = state->cp0_page_mask; return 0;
     case 6u:  *value = state->cp0_wired; return 0;
     case 8u:  *value = state->badvaddr; return 0;
@@ -75,6 +86,10 @@ int ps2_ee_cp0_write(ps2_ee_state_t *state, unsigned reg, unsigned sel, uint32_t
         return 0;
     case 3u:
         state->cp0_entry_lo1 = value & UINT32_C(0x03ffffff);
+        return 0;
+    case 4u:
+        state->cp0_context = (state->cp0_context & UINT32_C(0xff800000)) |
+                             (value & UINT32_C(0x007ffff0));
         return 0;
     case 5u:
         state->cp0_page_mask = value & UINT32_C(0x01ffe000);

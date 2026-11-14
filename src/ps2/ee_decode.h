@@ -10,3 +10,6 @@ ps2_ee_step_result_t ps2_ee_step(ps2_ee_state_t *state, ps2_ee_memory_t *memory)
 ps2_ee_step_result_t ps2_ee_execute_memory_word_tlb(ps2_ee_state_t *state, ps2_ee_memory_t *memory, const ps2_ee_tlb_t *tlb, uint32_t instruction);
 ps2_ee_step_result_t ps2_ee_step_tlb(ps2_ee_state_t *state, ps2_ee_memory_t *memory, const ps2_ee_tlb_t *tlb);
 #endif
+
+ps2_ee_step_result_t ps2_ee_execute_memory_word_arch_tlb(ps2_ee_state_t *state, ps2_ee_memory_t *memory, const ps2_ee_tlb_arch_t *tlb, uint32_t instruction);
+ps2_ee_step_result_t ps2_ee_step_arch_tlb(ps2_ee_state_t *state, ps2_ee_memory_t *memory, const ps2_ee_tlb_arch_t *tlb);

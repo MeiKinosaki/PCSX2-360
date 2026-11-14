@@ -36,6 +36,7 @@ O executável final obrigatório é **`build/default.xex`**. O arquivo ELF, quan
 - [ ] Auditoria diferencial completa da semântica R5900, incluindo PageMask, PFN, delay slots e exceções.
 - [x] Snapshot experimental de máquina: estado EE + TLB arquitetural de 48 entradas + RAM, cabeçalho versionado, tamanho e checksum; testes de round-trip e corrupção adicionados. Ainda é ABI local do build, exige RAM de mesmo tamanho e não inclui IOP/DMA/VU/GS nem persistência integrada ao runtime.
 - [ ] Integração de todas as instruções de memória e fetch no caminho principal da CPU.
+- [x] Modelo inicial de biblioteca de jogos: cadastro limitado, proteção contra serial duplicado, favoritos e filtros por título/serial/gênero; testes dedicados adicionados e conectados ao `make check` (aprovação CI pendente).
 - [ ] Toolchain Xenon configurada e `default.xex` compilado.
 - [ ] Inicialização comprovada em Xbox 360 RGH/JTAG.
 - [ ] Emulação de jogos PS2.
@@ -67,7 +68,7 @@ O job Xenon do GitHub Actions usa runner self-hosted com labels `linux` e `xenon
 
 ## Próximas etapas
 
-1. Validar snapshot EE e evoluí-lo para formato portátil incluindo TLB/RAM/dispositivos; depois integrar save/load no runtime.
+1. Validar no CI o novo modelo de biblioteca e o snapshot EE; evoluir o save/load para formato portátil incluindo TLB/RAM/dispositivos e integrar no runtime.
 2. Fechar o caminho de fetch, load/store e exceções com a TLB arquitetural no executor principal.
 3. Integrar scheduler EE, IOP e os dez canais DMA reais.
 4. Desenvolver VU0/VU1, VIF, GIF, GS, SPU2 e CDVD.

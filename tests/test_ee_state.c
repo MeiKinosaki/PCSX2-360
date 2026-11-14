@@ -459,6 +459,8 @@ int main(void)
       assert(((s.cause >> 2) & 31u) == PS2_EE_EXC_ADEL);
 
       /* A valid read-only mapping rejects SW with Modified exception. */
+      assert(ps2_ee_tlb_write(&tlb, 0, UINT32_C(0x00001000), 0,
+                              0, 1, 0, 0) == PS2_EE_TLB_OK);
       assert(ps2_ee_mem_store(&mem, 0, 4, sw) == 0);
       ps2_ee_reset(&s);
       s.pc = UINT32_C(0x00001000);

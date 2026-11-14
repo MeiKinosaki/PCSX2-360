@@ -609,6 +609,7 @@ int main(void)
       assert(ps2_ee_cp0_tlbwr(&cp0, &table) == PS2_EE_TLB_OK);
       assert(cp0.cp0_random == 46u);
       uint32_t physical = 0u;
+      ps2_ee_tlb_arch_reset(&table);
       table.current_asid = 7u;
       cp0.cp0_page_mask = UINT32_C(0x00006000);
       cp0.cp0_index = 10u;

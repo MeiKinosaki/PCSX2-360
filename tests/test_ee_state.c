@@ -878,6 +878,23 @@ int main(void)
         assert(cpu.gpr[7] == 7u);
       }
 
+      /* Signed overflow in a delay slot must preserve BD and the owning branch EPC. */
+      {
+        uint32_t dsub = (1u << 21) | (2u << 16) | (3u << 11) | 0x2eu;
+        ps2_ee_reset(&cpu);
+        cpu.pc = UINT32_C(0x28); /* decoder sees delay-slot PC+4 */
+        cpu.next_pc = UINT32_C(0x30);
+        cpu.in_delay_slot = 1u;
+        cpu.branch_pc = UINT32_C(0x20);
+        cpu.gpr[1] = UINT64_C(0x7fffffffffffffff);
+        cpu.gpr[2] = UINT64_C(1);
+        assert(ps2_ee_execute_memory_word_arch_tlb(&cpu, &code_mem, &code_tlb, dsub)
+            == PS2_EE_STEP_EXCEPTION);
+        assert(((cpu.cause >> 2) & 31u) == PS2_EE_EXC_OV);
+        assert((cpu.cause & UINT32_C(0x80000000)) != 0u);
+        assert(cpu.epc == UINT32_C(0x20));
+      }
+
       /* Fetch miss must report the virtual PC in BadVAddr. */
       ps2_ee_reset(&cpu);
       cpu.cp0_entry_hi = 3u;

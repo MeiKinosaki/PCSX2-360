@@ -29,6 +29,7 @@ typedef struct ps2_ee_tlb_entry {
     uint8_t valid;
     uint8_t dirty;
     uint8_t global;
+    uint8_t present; /* Slot has been programmed, even if EntryLo is invalid. */
 } ps2_ee_tlb_entry_t;
 
 enum {
@@ -53,6 +54,9 @@ int ps2_ee_tlb_write(ps2_ee_tlb_t *tlb, unsigned index,
                      uint8_t asid, int valid, int dirty, int global);
 int ps2_ee_tlb_lookup(const ps2_ee_tlb_t *tlb, uint32_t virtual_address,
                       ps2_ee_tlb_entry_t *entry);
+/* TLBP-like search: returns status and writes the matching slot index. */
+int ps2_ee_tlb_probe(const ps2_ee_tlb_t *tlb, uint32_t virtual_address,
+                     unsigned *index);
 int ps2_ee_tlb_check_page(const ps2_ee_tlb_t *tlb, uint32_t virtual_address,
                           int is_write);
 unsigned ps2_ee_tlb_count_valid(const ps2_ee_tlb_t *tlb);

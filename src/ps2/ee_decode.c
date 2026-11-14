@@ -74,7 +74,7 @@ ps2_ee_step_result_t ps2_ee_execute_word(ps2_ee_state_t *s, uint32_t insn)
         case 0x1f: if(b!=0u){s->lo=a/b;s->hi=a%b;} break; /* DDIVU */
         case 0x2c: { uint64_t z=a+b; if ((((~(a^b)) & (a^z)) >> 63) != 0u) { ps2_ee_raise_exception(s, s->pc - UINT32_C(4), 12u, s->in_delay_slot); return PS2_EE_STEP_EXCEPTION; } if(rd)s->gpr[rd]=z; break; } /* DADD */
         case 0x2d: if(rd)s->gpr[rd]=a+b; break; /* DADDU */
-        case 0x2e: { uint64_t z=a-b; if ((((a^b) & (a^z)) >> 63) != 0u) { ps2_ee_raise_exception(s, s->pc - UINT32_C(4), 12u, 0); return PS2_EE_STEP_EXCEPTION; } if(rd)s->gpr[rd]=z; break; } /* DSUB */
+        case 0x2e: { uint64_t z=a-b; if ((((a^b) & (a^z)) >> 63) != 0u) { ps2_ee_raise_exception(s, s->pc - UINT32_C(4), 12u, s->in_delay_slot); return PS2_EE_STEP_EXCEPTION; } if(rd)s->gpr[rd]=z; break; } /* DSUB */
         case 0x2f: if(rd)s->gpr[rd]=a-b; break; /* DSUBU */
         case 0x38: if(rd)s->gpr[rd]=b<<shamt; break;
         case 0x3a: if(rd)s->gpr[rd]=b>>shamt; break;
@@ -84,9 +84,9 @@ ps2_ee_step_result_t ps2_ee_execute_word(ps2_ee_state_t *s, uint32_t insn)
         case 0x3f: if(rd)s->gpr[rd]=arithmetic_shift_right_u64(b,shamt+32u); break; /* DSRA32 */
         case 0x08: s->next_pc=(uint32_t)a; break;
         case 0x09: if(rd)s->gpr[rd]=(uint32_t)(s->pc+4u); s->next_pc=(uint32_t)a; break;
-        case 0x20: rc=ps2_ee_add32(s,rd,rs,rt); if(rc==1){ps2_ee_raise_exception(s,s->pc-UINT32_C(4),12u,0);return PS2_EE_STEP_EXCEPTION;} goto done;
+        case 0x20: rc=ps2_ee_add32(s,rd,rs,rt); if(rc==1){ps2_ee_raise_exception(s,s->pc-UINT32_C(4),12u,s->in_delay_slot);return PS2_EE_STEP_EXCEPTION;} goto done;
         case 0x21: rc=ps2_ee_addu32(s,rd,rs,rt); goto done;
-        case 0x22: rc=ps2_ee_sub32(s,rd,rs,rt); if(rc==1){ps2_ee_raise_exception(s,s->pc-UINT32_C(4),12u,0);return PS2_EE_STEP_EXCEPTION;} goto done;
+        case 0x22: rc=ps2_ee_sub32(s,rd,rs,rt); if(rc==1){ps2_ee_raise_exception(s,s->pc-UINT32_C(4),12u,s->in_delay_slot);return PS2_EE_STEP_EXCEPTION;} goto done;
         case 0x23: rc=ps2_ee_subu32(s,rd,rs,rt); goto done;
         case 0x24: rc=ps2_ee_logic(s,rd,rs,rt,PS2_EE_LOGIC_AND); goto done;
         case 0x25: rc=ps2_ee_logic(s,rd,rs,rt,PS2_EE_LOGIC_OR); goto done;
@@ -104,7 +104,7 @@ ps2_ee_step_result_t ps2_ee_execute_word(ps2_ee_state_t *s, uint32_t insn)
     case 0x05: if ((uint32_t)a != (uint32_t)b) s->next_pc = s->pc + (uint32_t)((int32_t)imm * 4); break;
     case 0x06: if ((int64_t)a <= 0) s->next_pc = s->pc + (uint32_t)((int32_t)imm * 4); break;
     case 0x07: if ((int64_t)a > 0) s->next_pc = s->pc + (uint32_t)((int32_t)imm * 4); break;
-    case 0x08: rc=ps2_ee_addi32(s,rt,rs,imm); if(rc==1){ps2_ee_raise_exception(s,s->pc-UINT32_C(4),12u,0);return PS2_EE_STEP_EXCEPTION;} goto done;
+    case 0x08: rc=ps2_ee_addi32(s,rt,rs,imm); if(rc==1){ps2_ee_raise_exception(s,s->pc-UINT32_C(4),12u,s->in_delay_slot);return PS2_EE_STEP_EXCEPTION;} goto done;
     case 0x09: rc=ps2_ee_addiu32(s,rt,rs,imm); goto done;
     case 0x0a: rc=ps2_ee_slti64(s,rt,rs,imm); goto done;
     case 0x0b: rc=ps2_ee_sltiu64(s,rt,rs,imm); goto done;
@@ -126,7 +126,7 @@ ps2_ee_step_result_t ps2_ee_execute_word(ps2_ee_state_t *s, uint32_t insn)
             break;
         }
         return PS2_EE_STEP_UNSUPPORTED;
-    case 0x18: { uint64_t addend=(uint64_t)(int64_t)imm, z=a+addend; if ((((~(a^addend)) & (a^z)) >> 63) != 0u) { ps2_ee_raise_exception(s, s->pc - UINT32_C(4), 12u, 0); return PS2_EE_STEP_EXCEPTION; } if(rt)s->gpr[rt]=z; break; } /* DADDI */
+    case 0x18: { uint64_t addend=(uint64_t)(int64_t)imm, z=a+addend; if ((((~(a^addend)) & (a^z)) >> 63) != 0u) { ps2_ee_raise_exception(s, s->pc - UINT32_C(4), 12u, s->in_delay_slot); return PS2_EE_STEP_EXCEPTION; } if(rt)s->gpr[rt]=z; break; } /* DADDI */
     case 0x19: if(rt)s->gpr[rt]=a+(uint64_t)(int64_t)imm; break; /* DADDIU */
     default: return PS2_EE_STEP_UNSUPPORTED;
     }

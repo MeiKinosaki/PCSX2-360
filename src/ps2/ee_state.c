@@ -13,6 +13,7 @@ void ps2_ee_reset(ps2_ee_state_t *state)
     memset(state, 0, sizeof(*state));
     state->pc = UINT32_C(0xBFC00000);
     state->next_pc = state->pc + UINT32_C(4);
+    state->cp0_random = UINT32_C(47);
     state->gpr[0] = 0;
 }
 
@@ -39,7 +40,14 @@ int ps2_ee_cp0_read(const ps2_ee_state_t *state, unsigned reg, unsigned sel, uin
 {
     if (state == NULL || value == NULL || sel != 0u) return -1;
     switch (reg) {
+    case 0u:  *value = state->cp0_index; return 0;
+    case 1u:  *value = state->cp0_random; return 0;
+    case 2u:  *value = state->cp0_entry_lo0; return 0;
+    case 3u:  *value = state->cp0_entry_lo1; return 0;
+    case 5u:  *value = state->cp0_page_mask; return 0;
+    case 6u:  *value = state->cp0_wired; return 0;
     case 8u:  *value = state->badvaddr; return 0;
+    case 10u: *value = state->cp0_entry_hi; return 0;
     case 12u: *value = state->status; return 0;
     case 13u: *value = state->cause; return 0;
     case 14u: *value = state->epc; return 0;
@@ -51,6 +59,26 @@ int ps2_ee_cp0_write(ps2_ee_state_t *state, unsigned reg, unsigned sel, uint32_t
 {
     if (state == NULL || sel != 0u) return -1;
     switch (reg) {
+    case 0u:
+        state->cp0_index = value & UINT32_C(0x8000003f);
+        return 0;
+    case 1u: return -3; /* Random is read-only in this interface. */
+    case 2u:
+        state->cp0_entry_lo0 = value & UINT32_C(0x03ffffff);
+        return 0;
+    case 3u:
+        state->cp0_entry_lo1 = value & UINT32_C(0x03ffffff);
+        return 0;
+    case 5u:
+        state->cp0_page_mask = value & UINT32_C(0x01ffe000);
+        return 0;
+    case 6u:
+        state->cp0_wired = value & UINT32_C(0x3f);
+        state->cp0_random = UINT32_C(47);
+        return 0;
+    case 10u:
+        state->cp0_entry_hi = value & UINT32_C(0xffffe0ff);
+        return 0;
     case 12u:
         /* This prototype models IE, EXL, ERL and BEV only; other Status bits
          * remain untouched until interrupt-mask and privilege logic exists. */

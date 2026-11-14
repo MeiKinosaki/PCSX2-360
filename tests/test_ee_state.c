@@ -505,6 +505,32 @@ int main(void)
       assert(s.badvaddr == UINT32_C(0x00001010));
       assert(((s.cause >> 2) & 31u) == PS2_EE_EXC_MOD);
     }
+    /* v0.2b: architectural 48-slot TLB pair model (EntryHi/EntryLo0/1, 4 KiB pages). */
+    {
+      ps2_ee_tlb_arch_t tlb;
+      unsigned index = 99u;
+      uint32_t physical = UINT32_C(0xdeadbeef);
+      uint32_t hi = UINT32_C(0x00400005); /* VPN2 + ASID 5 */
+      uint32_t lo0 = (UINT32_C(0x00012) << 6) | 0x7u; /* PFN, D, V, G */
+      uint32_t lo1 = (UINT32_C(0x00034) << 6) | 0x3u; /* PFN, V, G; read-only */
+      ps2_ee_tlb_arch_reset(&tlb);
+      assert(ps2_ee_tlb_arch_probe(&tlb, UINT32_C(0x00400020), &index) == PS2_EE_TLB_ERR_MISS);
+      assert(ps2_ee_tlb_arch_write_indexed(&tlb, 47u, hi, lo0, lo1) == PS2_EE_TLB_OK);
+      assert(ps2_ee_tlb_arch_probe(&tlb, UINT32_C(0x00400020), &index) == PS2_EE_TLB_OK);
+      assert(index == 47u);
+      assert(ps2_ee_tlb_arch_translate(&tlb, UINT32_C(0x00400020), 0, &physical) == PS2_EE_TLB_OK);
+      assert(physical == UINT32_C(0x00012020));
+      assert(ps2_ee_tlb_arch_translate(&tlb, UINT32_C(0x00401020), 0, &physical) == PS2_EE_TLB_OK);
+      assert(physical == UINT32_C(0x00034020));
+      assert(ps2_ee_tlb_arch_translate(&tlb, UINT32_C(0x00401020), 1, &physical) == PS2_EE_TLB_ERR_MODIFIED);
+      assert(ps2_ee_tlb_arch_probe(&tlb, UINT32_C(0x00400020), NULL) == PS2_EE_TLB_ERR_ARGUMENT);
+      assert(ps2_ee_tlb_arch_write_indexed(&tlb, 48u, hi, lo0, lo1) == PS2_EE_TLB_ERR_ARGUMENT);
+      tlb.current_asid = 6u;
+      assert(ps2_ee_tlb_arch_probe(&tlb, UINT32_C(0x00400020), &index) == PS2_EE_TLB_ERR_MISS);
+      /* Both EntryLo G bits are required for a global pair. */
+      assert(ps2_ee_tlb_arch_write_indexed(&tlb, 46u, hi, lo0, lo1 | 1u) == PS2_EE_TLB_OK);
+      assert(ps2_ee_tlb_arch_probe(&tlb, UINT32_C(0x00400020), &index) == PS2_EE_TLB_ERR_MULTIPLE);
+    }
     /* v0.1b CP0 slice: MFC0/MTC0 transfer and register write masks. */
     {
       uint32_t mfc0_epc = (UINT32_C(0x10) << 26) | (2u << 16) | (14u << 11);

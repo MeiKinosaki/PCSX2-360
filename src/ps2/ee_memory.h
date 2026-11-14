@@ -156,6 +156,16 @@ int ps2_ee_tlb_arch_translate(const ps2_ee_tlb_arch_t *tlb,
                               uint32_t virtual_address, int is_write,
                               uint32_t *physical_address);
 
+/* Experimental virtual memory accessors backed by the 48-entry paired-page TLB. */
+int ps2_ee_mem_load_virtual_arch_tlb(ps2_ee_memory_t *mem,
+                                     const ps2_ee_tlb_arch_t *tlb,
+                                     uint32_t virtual_address, unsigned width,
+                                     uint64_t *value);
+int ps2_ee_mem_store_virtual_arch_tlb(ps2_ee_memory_t *mem,
+                                      const ps2_ee_tlb_arch_t *tlb,
+                                      uint32_t virtual_address, unsigned width,
+                                      uint64_t value);
+
 /* CP0/TLB management operations. PageMask is currently restricted to 4 KiB
  * pages (zero); nonzero masks return ERR_UNSUPPORTED without mutating state. */
 int ps2_ee_cp0_tlbwi(struct ps2_ee_state *state, ps2_ee_tlb_arch_t *tlb);

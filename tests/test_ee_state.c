@@ -557,6 +557,20 @@ int main(void)
       assert(ps2_ee_execute_word(&s, mtc0_cause) == PS2_EE_STEP_OK);
       assert(s.cause == UINT32_C(0x80000324));
       assert(ps2_ee_cp0_read(&s, 13u, 0u, &value) == 0 && value == s.cause);
+      /* TLB-management CP0 register shadows: mask reserved bits and round-trip. */
+      assert(ps2_ee_cp0_write(&s, 0u, 0u, UINT32_C(0xffffffff)) == 0);
+      assert(ps2_ee_cp0_read(&s, 0u, 0u, &value) == 0 && value == UINT32_C(0x8000003f));
+      assert(ps2_ee_cp0_read(&s, 1u, 0u, &value) == 0 && value == 47u);
+      assert(ps2_ee_cp0_write(&s, 1u, 0u, 4u) == -3);
+      assert(ps2_ee_cp0_write(&s, 2u, 0u, UINT32_C(0xffffffff)) == 0);
+      assert(ps2_ee_cp0_read(&s, 2u, 0u, &value) == 0 && value == UINT32_C(0x03ffffff));
+      assert(ps2_ee_cp0_write(&s, 3u, 0u, UINT32_C(0x12345678)) == 0);
+      assert(ps2_ee_cp0_read(&s, 3u, 0u, &value) == 0 && value == UINT32_C(0x02345678));
+      assert(ps2_ee_cp0_write(&s, 5u, 0u, UINT32_C(0xffffffff)) == 0);
+      assert(ps2_ee_cp0_read(&s, 5u, 0u, &value) == 0 && value == UINT32_C(0x01ffe000));
+      assert(ps2_ee_cp0_write(&s, 6u, 0u, 12u) == 0);
+      assert(ps2_ee_cp0_read(&s, 6u, 0u, &value) == 0 && value == 12u);
+      assert(ps2_ee_cp0_read(&s, 1u, 1u, &value) == -1);
       assert(ps2_ee_cp0_write(&s, 8u, 0u, UINT32_C(0x1234)) == -3);
       assert(ps2_ee_cp0_read(&s, 0u, 0u, &value) == -2);
       assert(ps2_ee_cp0_read(&s, 14u, 1u, &value) == -1);

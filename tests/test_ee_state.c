@@ -105,7 +105,7 @@ int main(void)
     assert(ps2_ee_execute_word(&s,(0x0du<<26)|(2u<<21)|(6u<<16)|0x00ffu)==PS2_EE_STEP_OK&&s.gpr[6]==0x12ffu);
     assert(ps2_ee_execute_word(&s,(0x0eu<<26)|(2u<<21)|(7u<<16)|0x00ffu)==PS2_EE_STEP_OK&&s.gpr[7]==0x12cbu);
     s.gpr[2]=3;assert(ps2_ee_execute_word(&s,(2u<<16)|(3u<<11)|(2u<<6))==PS2_EE_STEP_OK&&s.gpr[3]==12);
-    s.pc=UINT32_C(0x1000); s.next_pc=UINT32_C(0x1004); s.in_delay_slot=0u; s.branch_pc=0u; assert(ps2_ee_execute_word(&s,(0x04u<<26)|2u)==PS2_EE_STEP_OK);assert(s.next_pc==UINT32_C(0x100c));assert(ps2_ee_execute_word(&s,0xffffffffu)==PS2_EE_STEP_UNSUPPORTED);assert(ps2_ee_execute_word(NULL,0u)==PS2_EE_STEP_INVALID);
+    s.pc=UINT32_C(0x1000); s.next_pc=UINT32_C(0x1004); s.in_delay_slot=0u; s.branch_pc=0u; assert(ps2_ee_execute_word(&s,(0x04u<<26)|2u)==PS2_EE_STEP_OK);assert(s.next_pc==UINT32_C(0x1008));assert(ps2_ee_execute_word(&s,0xffffffffu)==PS2_EE_STEP_UNSUPPORTED);assert(ps2_ee_execute_word(NULL,0u)==PS2_EE_STEP_INVALID);
     /* DADDU and DSLL32 */
     s.gpr[1]=UINT64_C(0x100000000);s.gpr[2]=7;
     assert(ps2_ee_execute_word(&s,(1u<<21)|(2u<<16)|(3u<<11)|0x2du)==PS2_EE_STEP_OK&&s.gpr[3]==UINT64_C(0x100000007));

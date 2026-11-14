@@ -1,4 +1,5 @@
 #include "ee_memory.h"
+#include "ee_state.h"
 
 #include <string.h>
 
@@ -473,4 +474,80 @@ int ps2_ee_tlb_arch_translate(const ps2_ee_tlb_arch_t *tlb,
     if (is_write && !half->dirty) return PS2_EE_TLB_ERR_MODIFIED;
     *physical_address = half->physical_page | offset;
     return PS2_EE_TLB_OK;
+}
+
+/* CP0 operations now manipulate the same 48-pair table used by translation.
+ * This first integration deliberately supports only the existing 4 KiB mode. */
+static int cp0_tlb_page_mode_supported(const ps2_ee_state_t *state)
+{
+    return state != 0 && state->cp0_page_mask == 0u;
+}
+
+int ps2_ee_cp0_tlbwi(struct ps2_ee_state *opaque_state, ps2_ee_tlb_arch_t *tlb)
+{
+    ps2_ee_state_t *state = (ps2_ee_state_t *)opaque_state;
+    unsigned index;
+    if (state == 0 || tlb == 0) return PS2_EE_TLB_ERR_ARGUMENT;
+    if (!cp0_tlb_page_mode_supported(state)) return PS2_EE_TLB_ERR_UNSUPPORTED;
+    index = state->cp0_index & UINT32_C(0x3f);
+    if (index >= 48u) return PS2_EE_TLB_ERR_ARGUMENT;
+    return ps2_ee_tlb_arch_write_indexed(tlb, index, state->cp0_entry_hi,
+                                         state->cp0_entry_lo0,
+                                         state->cp0_entry_lo1);
+}
+
+int ps2_ee_cp0_tlbwr(struct ps2_ee_state *opaque_state, ps2_ee_tlb_arch_t *tlb)
+{
+    ps2_ee_state_t *state = (ps2_ee_state_t *)opaque_state;
+    unsigned wired, random, status;
+    if (state == 0 || tlb == 0) return PS2_EE_TLB_ERR_ARGUMENT;
+    if (!cp0_tlb_page_mode_supported(state)) return PS2_EE_TLB_ERR_UNSUPPORTED;
+    wired = state->cp0_wired & UINT32_C(0x3f);
+    if (wired > 47u) wired = 47u;
+    random = state->cp0_random & UINT32_C(0x3f);
+    if (random < wired || random > 47u) random = 47u;
+    status = ps2_ee_tlb_arch_write_indexed(tlb, random, state->cp0_entry_hi,
+                                           state->cp0_entry_lo0,
+                                           state->cp0_entry_lo1);
+    if (status != PS2_EE_TLB_OK) return status;
+    state->cp0_random = random == wired ? 47u : random - 1u;
+    return PS2_EE_TLB_OK;
+}
+
+int ps2_ee_cp0_tlbr(struct ps2_ee_state *opaque_state, const ps2_ee_tlb_arch_t *tlb)
+{
+    ps2_ee_state_t *state = (ps2_ee_state_t *)opaque_state;
+    unsigned index;
+    int status;
+    uint32_t hi, lo0, lo1;
+    if (state == 0 || tlb == 0) return PS2_EE_TLB_ERR_ARGUMENT;
+    if (!cp0_tlb_page_mode_supported(state)) return PS2_EE_TLB_ERR_UNSUPPORTED;
+    index = state->cp0_index & UINT32_C(0x3f);
+    if (index >= 48u) return PS2_EE_TLB_ERR_ARGUMENT;
+    status = ps2_ee_tlb_arch_read_indexed(tlb, index, &hi, &lo0, &lo1);
+    if (status != PS2_EE_TLB_OK) return status;
+    state->cp0_entry_hi = hi;
+    state->cp0_entry_lo0 = lo0;
+    state->cp0_entry_lo1 = lo1;
+    return PS2_EE_TLB_OK;
+}
+
+int ps2_ee_cp0_tlbp(struct ps2_ee_state *opaque_state, const ps2_ee_tlb_arch_t *tlb)
+{
+    ps2_ee_state_t *state = (ps2_ee_state_t *)opaque_state;
+    unsigned index;
+    int status;
+    if (state == 0 || tlb == 0) return PS2_EE_TLB_ERR_ARGUMENT;
+    if (!cp0_tlb_page_mode_supported(state)) return PS2_EE_TLB_ERR_UNSUPPORTED;
+    /* EntryHi supplies the VPN and ASID; use its virtual page-pair base. */
+    status = ps2_ee_tlb_arch_probe(tlb, state->cp0_entry_hi & UINT32_C(0xffffe000),
+                                   &index);
+    if (status == PS2_EE_TLB_OK) {
+        state->cp0_index = index;
+        return PS2_EE_TLB_OK;
+    }
+    if (status == PS2_EE_TLB_ERR_MISS) {
+        state->cp0_index = UINT32_C(0x80000000);
+    }
+    return status;
 }

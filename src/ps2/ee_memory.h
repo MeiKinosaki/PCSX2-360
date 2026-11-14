@@ -136,6 +136,9 @@ void ps2_ee_tlb_arch_reset(ps2_ee_tlb_arch_t *tlb);
 int ps2_ee_tlb_arch_write_indexed(ps2_ee_tlb_arch_t *tlb, unsigned index,
                                   uint32_t entry_hi, uint32_t entry_lo0,
                                   uint32_t entry_lo1);
+int ps2_ee_tlb_arch_read_indexed(const ps2_ee_tlb_arch_t *tlb, unsigned index,
+                                 uint32_t *entry_hi, uint32_t *entry_lo0,
+                                 uint32_t *entry_lo1);
 int ps2_ee_tlb_arch_probe(const ps2_ee_tlb_arch_t *tlb,
                           uint32_t virtual_address, unsigned *index);
 int ps2_ee_tlb_arch_translate(const ps2_ee_tlb_arch_t *tlb,

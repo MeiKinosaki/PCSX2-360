@@ -116,6 +116,7 @@ typedef struct ps2_ee_tlb_half {
     uint32_t physical_page;
     uint8_t valid;
     uint8_t dirty;
+    uint8_t global;
 } ps2_ee_tlb_half_t;
 
 typedef struct ps2_ee_tlb_pair_entry {

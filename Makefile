@@ -6,7 +6,8 @@ ELF2XEX ?= elf2xex
 XENON_CFLAGS ?= -O2 -Wall -Wextra
 
 EE_SOURCES := src/ps2/ee_state.c src/ps2/ee_ops.c src/ps2/ee_immediate.c \
-              src/ps2/ee_compare.c src/ps2/ee_decode.c src/ps2/ee_memory.c
+              src/ps2/ee_compare.c src/ps2/ee_decode.c src/ps2/ee_memory.c \
+              src/ps2/ee_state_io.c
 HOST_TEST := $(BUILD_DIR)/test_ee_state
 
 .PHONY: all check validate test-host toolchain-check xex clean

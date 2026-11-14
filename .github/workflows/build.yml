@@ -1,0 +1,44 @@
+name: PCSX2-360 validation and XEX build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  host-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install host compiler
+        run: sudo apt-get update && sudo apt-get install -y build-essential
+      - name: Run EE regression tests
+        run: make check
+
+  xenon-default-xex:
+    # Configure a self-hosted runner with libXenon and elf2xex.
+    # Do not replace with ubuntu-latest unless the toolchain is actually provisioned.
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: [self-hosted, linux, xenon]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build final Xbox 360 executable
+        run: |
+          set -euo pipefail
+          make clean
+          make check
+          make xex
+          test -s build/default.xex
+          sha256sum build/default.xex > build/default.xex.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PCSX2-360-default-xex-${{ github.run_number }}
+          path: |
+            build/default.xex
+            build/default.xex.sha256
+          if-no-files-found: error
+          retention-days: 30

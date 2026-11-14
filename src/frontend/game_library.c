@@ -130,7 +130,6 @@ static uint32_t library_checksum(const uint8_t *data, size_t size)
 size_t pcsx2_game_library_snapshot_size(void)
 {
     return GAME_LIBRARY_HEADER_SIZE +
-           (size_t)PCSX2_GAME_LIBRARY_MAX * 0u +
            (size_t)GAME_LIBRARY_ENTRY_SIZE * PCSX2_GAME_LIBRARY_MAX;
 }
 
@@ -170,9 +169,8 @@ int pcsx2_game_library_save(const pcsx2_game_library_t *library,
 int pcsx2_game_library_load(pcsx2_game_library_t *library,
                             const uint8_t *data, size_t size)
 {
-    pcsx2_game_library_t candidate;
     uint32_t count;
-    size_t expected, offset = GAME_LIBRARY_HEADER_SIZE, i;
+    size_t expected, offset, i, j;
     if (library == NULL || data == NULL) return -1;
     if (size < GAME_LIBRARY_HEADER_SIZE || read_u32_le(data) != GAME_LIBRARY_MAGIC)
         return -2;
@@ -184,18 +182,45 @@ int pcsx2_game_library_load(pcsx2_game_library_t *library,
     if (library_checksum(data + GAME_LIBRARY_HEADER_SIZE,
                          size - GAME_LIBRARY_HEADER_SIZE) != read_u32_le(data + 12))
         return -6;
-    pcsx2_game_library_init(&candidate);
+
+    /* Validate all records before mutating the destination library. */
+    offset = GAME_LIBRARY_HEADER_SIZE;
     for (i = 0; i < count; ++i) {
-        pcsx2_game_entry_t entry;
-        memcpy(entry.title, data + offset, sizeof(entry.title)); offset += sizeof(entry.title);
-        memcpy(entry.serial, data + offset, sizeof(entry.serial)); offset += sizeof(entry.serial);
-        memcpy(entry.genre, data + offset, sizeof(entry.genre)); offset += sizeof(entry.genre);
-        memcpy(entry.image_path, data + offset, sizeof(entry.image_path)); offset += sizeof(entry.image_path);
-        memcpy(entry.cover_path, data + offset, sizeof(entry.cover_path)); offset += sizeof(entry.cover_path);
-        entry.favorite = data[offset++];
-        if (entry.favorite > 1u) return -7;
-        if (pcsx2_game_library_add(&candidate, &entry) != 0) return -8;
+        const uint8_t *record = data + offset;
+        const char *title = (const char *)record;
+        const char *serial = title + PCSX2_GAME_TITLE_MAX;
+        const char *genre = serial + PCSX2_GAME_SERIAL_MAX;
+        const char *image = genre + PCSX2_GAME_GENRE_MAX;
+        const char *cover = image + PCSX2_GAME_PATH_MAX;
+        const uint8_t favorite = (uint8_t)cover[PCSX2_GAME_PATH_MAX];
+        if (!bounded_string_valid(title, PCSX2_GAME_TITLE_MAX) ||
+            !bounded_string_valid(serial, PCSX2_GAME_SERIAL_MAX) ||
+            !bounded_string_valid(genre, PCSX2_GAME_GENRE_MAX) ||
+            !bounded_string_valid(image, PCSX2_GAME_PATH_MAX) ||
+            !bounded_string_valid(cover, PCSX2_GAME_PATH_MAX) ||
+            title[0] == '\\0' || serial[0] == '\\0' || favorite > 1u)
+            return -7;
+        for (j = 0; j < i; ++j) {
+            const uint8_t *previous = data + GAME_LIBRARY_HEADER_SIZE +
+                                      j * GAME_LIBRARY_ENTRY_SIZE;
+            const char *previous_serial =
+                (const char *)previous + PCSX2_GAME_TITLE_MAX;
+            if (equal_case_insensitive(previous_serial, serial)) return -8;
+        }
+        offset += GAME_LIBRARY_ENTRY_SIZE;
     }
-    *library = candidate;
+
+    pcsx2_game_library_init(library);
+    offset = GAME_LIBRARY_HEADER_SIZE;
+    for (i = 0; i < count; ++i) {
+        pcsx2_game_entry_t *entry = &library->entries[i];
+        memcpy(entry->title, data + offset, sizeof(entry->title)); offset += sizeof(entry->title);
+        memcpy(entry->serial, data + offset, sizeof(entry->serial)); offset += sizeof(entry->serial);
+        memcpy(entry->genre, data + offset, sizeof(entry->genre)); offset += sizeof(entry->genre);
+        memcpy(entry->image_path, data + offset, sizeof(entry->image_path)); offset += sizeof(entry->image_path);
+        memcpy(entry->cover_path, data + offset, sizeof(entry->cover_path)); offset += sizeof(entry->cover_path);
+        entry->favorite = data[offset++];
+    }
+    library->count = count;
     return 0;
 }

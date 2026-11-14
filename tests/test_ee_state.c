@@ -733,5 +733,45 @@ int main(void)
       assert(cpu.badvaddr == UINT32_C(0x8000));
       assert(((cpu.cause >> 2) & 31u) == PS2_EE_EXC_TLBL);
     }
+
+    /* COP0 CO-format TLB instructions must operate on the live machine TLB. */
+    {
+      ps2_ee_state_t cpu;
+      ps2_ee_tlb_arch_t tlb;
+      uint32_t tlbwi = (UINT32_C(0x10) << 26) | (UINT32_C(16) << 21) | 0x02u;
+      uint32_t tlbr = (UINT32_C(0x10) << 26) | (UINT32_C(16) << 21) | 0x01u;
+      uint32_t tlbp = (UINT32_C(0x10) << 26) | (UINT32_C(16) << 21) | 0x08u;
+      uint32_t tlbwr = (UINT32_C(0x10) << 26) | (UINT32_C(16) << 21) | 0x06u;
+      unsigned found = 99u;
+      ps2_ee_reset(&cpu);
+      ps2_ee_tlb_arch_reset(&tlb);
+      cpu.cp0_index = 4u;
+      cpu.cp0_entry_hi = UINT32_C(0x0123402a);
+      cpu.cp0_entry_lo0 = (UINT32_C(0x00031) << 6) | 7u;
+      cpu.cp0_entry_lo1 = (UINT32_C(0x00032) << 6) | 7u;
+      assert(ps2_ee_execute_word_arch_tlb(&cpu, &tlb, tlbwi) == PS2_EE_STEP_OK);
+      assert(ps2_ee_tlb_arch_probe(&tlb, UINT32_C(0x01234020), &found) == PS2_EE_TLB_OK);
+      assert(found == 4u);
+      cpu.cp0_index = 4u;
+      cpu.cp0_entry_hi = 0u;
+      cpu.cp0_entry_lo0 = 0u;
+      cpu.cp0_entry_lo1 = 0u;
+      assert(ps2_ee_execute_word_arch_tlb(&cpu, &tlb, tlbr) == PS2_EE_STEP_OK);
+      assert(cpu.cp0_entry_hi == UINT32_C(0x0123402a));
+      assert(cpu.cp0_entry_lo0 == ((UINT32_C(0x00031) << 6) | 7u));
+      assert(cpu.cp0_entry_lo1 == ((UINT32_C(0x00032) << 6) | 7u));
+      assert(ps2_ee_execute_word_arch_tlb(&cpu, &tlb, tlbp) == PS2_EE_STEP_OK);
+      assert(cpu.cp0_index == 4u);
+      cpu.cp0_entry_hi = UINT32_C(0x0145602a);
+      assert(ps2_ee_execute_word_arch_tlb(&cpu, &tlb, tlbp) == PS2_EE_STEP_OK);
+      assert(cpu.cp0_index == UINT32_C(0x80000000));
+      cpu.cp0_wired = 46u;
+      cpu.cp0_random = 47u;
+      cpu.cp0_entry_hi = UINT32_C(0x0167802a);
+      assert(ps2_ee_execute_word_arch_tlb(&cpu, &tlb, tlbwr) == PS2_EE_STEP_OK);
+      assert(cpu.cp0_random == 46u);
+      assert(ps2_ee_tlb_arch_probe(&tlb, UINT32_C(0x01678020), &found) == PS2_EE_TLB_OK);
+      assert(found == 47u);
+    }
     puts("OK: EE helpers, decoder, TLB-backed step, scalar memory ops and arithmetic tests.");return 0;
 }

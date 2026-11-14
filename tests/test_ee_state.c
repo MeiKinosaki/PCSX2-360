@@ -1024,6 +1024,18 @@ int main(void)
       original.cycle_count = UINT64_C(987654321);
       assert(ps2_ee_state_save(&original, snapshot, sizeof(snapshot), &written) == 0);
       assert(written == 16u + sizeof(original));
+      /* A rejected save reports no bytes and leaves the output untouched. */
+      {
+        uint8_t guard[16];
+        memset(guard, 0x6d, sizeof(guard));
+        written = 77u;
+        assert(ps2_ee_state_save(&original, guard, sizeof(guard), &written) == -2);
+        assert(written == 0u);
+        {
+          size_t k;
+          for (k = 0; k < sizeof(guard); ++k) assert(guard[k] == 0x6du);
+        }
+      }
       ps2_ee_reset(&restored);
       assert(ps2_ee_state_load(&restored, snapshot, written) == 0);
       assert(restored.pc == original.pc && restored.next_pc == original.next_pc);
@@ -1050,6 +1062,15 @@ int main(void)
       ram[9] = UINT8_C(0x5a);
       assert(ps2_ee_machine_snapshot_save(&saved, &saved_tlb, &mem, machine_blob,
              sizeof(machine_blob), &blob_size) == 0);
+      {
+        uint8_t guard[16];
+        size_t rejected_size = 55u, k;
+        memset(guard, 0x3c, sizeof(guard));
+        assert(ps2_ee_machine_snapshot_save(&saved, &saved_tlb, &mem,
+               guard, sizeof(guard), &rejected_size) == -3);
+        assert(rejected_size == 0u);
+        for (k = 0; k < sizeof(guard); ++k) assert(guard[k] == 0x3cu);
+      }
       ps2_ee_reset(&loaded);
       ps2_ee_tlb_arch_reset(&loaded_tlb);
       ram[9] = 0u;

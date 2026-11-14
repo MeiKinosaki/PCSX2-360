@@ -138,6 +138,17 @@ typedef struct ps2_ee_tlb_arch {
 } ps2_ee_tlb_arch_t;
 
 void ps2_ee_tlb_arch_reset(ps2_ee_tlb_arch_t *tlb);
+/* Combined experimental EE+architectural-TLB+RAM snapshot.
+ * Build-ABI-local and requires identical RAM sizing. */
+int ps2_ee_machine_snapshot_save(const struct ps2_ee_state *state,
+                                 const ps2_ee_tlb_arch_t *tlb,
+                                 const ps2_ee_memory_t *memory,
+                                 uint8_t *out, size_t capacity, size_t *written);
+int ps2_ee_machine_snapshot_load(struct ps2_ee_state *state,
+                                 ps2_ee_tlb_arch_t *tlb,
+                                 ps2_ee_memory_t *memory,
+                                 const uint8_t *data, size_t size);
+
 int ps2_ee_tlb_arch_write_indexed(ps2_ee_tlb_arch_t *tlb, unsigned index,
                                   uint32_t entry_hi, uint32_t entry_lo0,
                                   uint32_t entry_lo1);

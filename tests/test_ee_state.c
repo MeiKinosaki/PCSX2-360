@@ -714,6 +714,14 @@ int main(void)
       assert(cpu.badvaddr == UINT32_C(0x8000));
       assert(((cpu.cause >> 2) & 31u) == PS2_EE_EXC_TLBL);
 
+      /* An unaligned instruction address raises ADEL before TLB translation. */
+      ps2_ee_reset(&cpu);
+      cpu.pc = UINT32_C(0x21);
+      cpu.next_pc = UINT32_C(0x25);
+      assert(ps2_ee_step_arch_tlb(&cpu, &code_mem, &code_tlb) == PS2_EE_STEP_EXCEPTION);
+      assert(cpu.badvaddr == UINT32_C(0x21));
+      assert(((cpu.cause >> 2) & 31u) == PS2_EE_EXC_ADEL);
+
       /* A data miss must populate BadVAddr and enter the TLB-load exception vector. */
       cpu.pc = UINT32_C(0x100);
       cpu.gpr[4] = UINT32_C(0x8000); /* outside the mapped 8 KiB TLB pair */

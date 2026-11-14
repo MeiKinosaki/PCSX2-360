@@ -368,6 +368,12 @@ ps2_ee_step_result_t ps2_ee_step_arch_tlb(ps2_ee_state_t *s,
     ps2_ee_tlb_arch_t lookup;
     ps2_ee_step_result_t result;
     if (s == NULL || mem == NULL || tlb == NULL) return PS2_EE_STEP_INVALID;
+    /* MIPS instruction fetch requires word alignment; report ADEL before TLB lookup. */
+    if ((s->pc & UINT32_C(3)) != 0u) {
+        s->badvaddr = s->pc;
+        ps2_ee_raise_exception(s, s->pc, PS2_EE_EXC_ADEL, 0);
+        return PS2_EE_STEP_EXCEPTION;
+    }
     lookup = *tlb;
     lookup.current_asid = (uint8_t)(s->cp0_entry_hi & UINT32_C(0xff));
     status = ps2_ee_tlb_arch_translate(&lookup, s->pc, 0, &physical);

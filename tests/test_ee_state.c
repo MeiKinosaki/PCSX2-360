@@ -693,6 +693,27 @@ int main(void)
       assert(value == UINT32_C(0xabcdef01));
     }
 
+    /* KSEG0/KSEG1 direct aliases bypass the architectural TLB. */
+    {
+      uint8_t direct_ram[UINT32_C(0x1000)] = {0};
+      ps2_ee_memory_t direct_mem = {direct_ram, sizeof(direct_ram)};
+      ps2_ee_tlb_arch_t direct_tlb;
+      uint64_t value = 0;
+      uint32_t physical = UINT32_MAX;
+      ps2_ee_tlb_arch_reset(&direct_tlb);
+      assert(ps2_ee_translate_address_arch_tlb(&direct_tlb,
+          UINT32_C(0x80000024), 0, &physical) == PS2_EE_TLB_OK);
+      assert(physical == UINT32_C(0x24));
+      assert(ps2_ee_translate_address_arch_tlb(&direct_tlb,
+          UINT32_C(0xa0000024), 1, &physical) == PS2_EE_TLB_OK);
+      assert(physical == UINT32_C(0x24));
+      assert(ps2_ee_mem_store_virtual_arch_tlb(&direct_mem, &direct_tlb,
+          UINT32_C(0x80000024), 4u, UINT32_C(0x76543210)) == PS2_EE_MEM_OK);
+      assert(ps2_ee_mem_load_virtual_arch_tlb(&direct_mem, &direct_tlb,
+          UINT32_C(0xa0000024), 4u, &value) == PS2_EE_MEM_OK);
+      assert(value == UINT32_C(0x76543210));
+    }
+
     /* Architectural paired-page TLB is exercised by real EE LW/SW decoding. */
     {
       uint8_t code_ram[UINT32_C(0x4000)] = {0};

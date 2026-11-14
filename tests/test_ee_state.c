@@ -348,8 +348,15 @@ int main(void)
       assert(ps2_ee_execute_memory_word_tlb(&s, &mem, &tlb,
           (0x2bu<<26)|(1u<<21)|(4u<<16)|4u) == PS2_EE_STEP_OK);
       assert(ps2_ee_mem_load(&mem, 0x04, 4, &loaded) == 0 && loaded == UINT32_C(0x1234abcd));
+      /* Unmapped data page now enters the CP0 TLB-load exception path. */
+      ps2_ee_reset(&s);
+      s.pc = UINT32_C(0x80001004);
+      s.next_pc = UINT32_C(0x80001008);
+      s.gpr[1] = UINT32_C(0x00001000);
       assert(ps2_ee_execute_memory_word_tlb(&s, &mem, &tlb,
-          (0x23u<<26)|(1u<<21)|(5u<<16)|UINT32_C(0x1000)) == PS2_EE_STEP_INVALID);
+          (0x23u<<26)|(1u<<21)|(5u<<16)|UINT32_C(0x1000)) == PS2_EE_STEP_EXCEPTION);
+      assert(s.badvaddr == UINT32_C(0x00002000));
+      assert(((s.cause >> 2) & 31u) == PS2_EE_EXC_TLBL);
       assert(ps2_ee_tlb_write(&tlb, 1, UINT32_C(0x00001000), UINT32_C(0x00000000), 0, 1, 1, 0) == PS2_EE_TLB_OK);
       assert(ps2_ee_execute_memory_word_tlb(&s, &mem, &tlb,
           (0x23u<<26)|(1u<<21)|(2u<<16)) == PS2_EE_STEP_INVALID);

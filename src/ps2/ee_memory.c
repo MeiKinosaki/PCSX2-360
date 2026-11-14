@@ -523,12 +523,12 @@ int ps2_ee_cp0_tlbwi(struct ps2_ee_state *opaque_state, ps2_ee_tlb_arch_t *tlb)
     ps2_ee_state_t *state = (ps2_ee_state_t *)opaque_state;
     unsigned index;
     if (state == 0 || tlb == 0) return PS2_EE_TLB_ERR_ARGUMENT;
-    if (!cp0_tlb_page_mode_supported(state)) return PS2_EE_TLB_ERR_UNSUPPORTED;
     index = state->cp0_index & UINT32_C(0x3f);
     if (index >= 48u) return PS2_EE_TLB_ERR_ARGUMENT;
-    return ps2_ee_tlb_arch_write_indexed(tlb, index, state->cp0_entry_hi,
-                                         state->cp0_entry_lo0,
-                                         state->cp0_entry_lo1);
+    return ps2_ee_tlb_arch_write_indexed_masked(tlb, index, state->cp0_entry_hi,
+                                                state->cp0_entry_lo0,
+                                                state->cp0_entry_lo1,
+                                                state->cp0_page_mask);
 }
 
 int ps2_ee_cp0_tlbwr(struct ps2_ee_state *opaque_state, ps2_ee_tlb_arch_t *tlb)
@@ -541,9 +541,10 @@ int ps2_ee_cp0_tlbwr(struct ps2_ee_state *opaque_state, ps2_ee_tlb_arch_t *tlb)
     if (wired > 47u) wired = 47u;
     random = state->cp0_random & UINT32_C(0x3f);
     if (random < wired || random > 47u) random = 47u;
-    status = ps2_ee_tlb_arch_write_indexed(tlb, random, state->cp0_entry_hi,
-                                           state->cp0_entry_lo0,
-                                           state->cp0_entry_lo1);
+    status = ps2_ee_tlb_arch_write_indexed_masked(tlb, random, state->cp0_entry_hi,
+                                                  state->cp0_entry_lo0,
+                                                  state->cp0_entry_lo1,
+                                                  state->cp0_page_mask);
     if (status != PS2_EE_TLB_OK) return status;
     state->cp0_random = random == wired ? 47u : random - 1u;
     return PS2_EE_TLB_OK;
@@ -554,16 +555,17 @@ int ps2_ee_cp0_tlbr(struct ps2_ee_state *opaque_state, const ps2_ee_tlb_arch_t *
     ps2_ee_state_t *state = (ps2_ee_state_t *)opaque_state;
     unsigned index;
     int status;
-    uint32_t hi, lo0, lo1;
+    uint32_t hi, lo0, lo1, page_mask;
     if (state == 0 || tlb == 0) return PS2_EE_TLB_ERR_ARGUMENT;
     if (!cp0_tlb_page_mode_supported(state)) return PS2_EE_TLB_ERR_UNSUPPORTED;
     index = state->cp0_index & UINT32_C(0x3f);
     if (index >= 48u) return PS2_EE_TLB_ERR_ARGUMENT;
-    status = ps2_ee_tlb_arch_read_indexed(tlb, index, &hi, &lo0, &lo1);
+    status = ps2_ee_tlb_arch_read_indexed_masked(tlb, index, &hi, &lo0, &lo1, &page_mask);
     if (status != PS2_EE_TLB_OK) return status;
     state->cp0_entry_hi = hi;
     state->cp0_entry_lo0 = lo0;
     state->cp0_entry_lo1 = lo1;
+    state->cp0_page_mask = page_mask;
     return PS2_EE_TLB_OK;
 }
 

@@ -27,3 +27,13 @@ size_t ps2_device_fifo_count(const ps2_device_fifos_t *f,ps2_device_fifo_id_t id
     if(f==0 || (unsigned)id>=(unsigned)PS2_FIFO_COUNT)return 0u;
     return f->fifo[id].count;
 }
+
+int ps2_device_fifo_dma_transfer(void *opaque,unsigned channel,uint8_t qword[16],int direction)
+{
+    ps2_device_fifo_endpoint_t *endpoint=(ps2_device_fifo_endpoint_t*)opaque;
+    (void)channel;
+    if(endpoint==0 || endpoint->fifos==0 || qword==0)return -1;
+    return direction
+        ? ps2_device_fifo_push(endpoint->fifos,endpoint->id,qword)
+        : ps2_device_fifo_pop(endpoint->fifos,endpoint->id,qword);
+}

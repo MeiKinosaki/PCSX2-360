@@ -27,7 +27,7 @@ int main(void)
     ps2_dma_chain_reset(&s,0x100);
     assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,0,1,0)==1);
     assert(sink.calls==1u && sink.last[0]==1u && sink.last[15]==16u);
-    assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,0,1)==2);
+    assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,0,1,0)==2);
     assert(s.finished && !s.active);
     memset(ram,0,sizeof ram); sink.calls=0;
     write_tag(ram+0x100,1,PS2_DMA_TAG_CALL,0x200);
@@ -37,7 +37,7 @@ int main(void)
     ps2_dma_chain_reset(&s,0x100);
     assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,1,1,0)==1);
     assert(s.stack_depth==1u);
-    assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,1,1)==2);
+    assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,1,1,0)==2);
     assert(s.finished && s.stack_depth==0u);
     /* Nested CALL/RET uses both return-stack entries in LIFO order. */
     memset(ram,0,sizeof ram);
@@ -47,7 +47,7 @@ int main(void)
     write_tag(ram+0x210,0,PS2_DMA_TAG_RET,0);
     write_tag(ram+0x300,0,PS2_DMA_TAG_RET,0);
     ps2_dma_chain_reset(&s,0x100);
-    assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,1,1)==2);
+    assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,1,1,0)==2);
     assert(s.finished && s.stack_depth==0u);
 
     /* A third nested CALL exceeds the two-entry hardware return stack. */
@@ -56,7 +56,7 @@ int main(void)
     write_tag(ram+0x200,0,PS2_DMA_TAG_CALL,0x300);
     write_tag(ram+0x300,0,PS2_DMA_TAG_CALL,0x400);
     ps2_dma_chain_reset(&s,0x100);
-    assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,1,1)==-5);
+    assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,1,1,0)==-5);
 
     memset(ram,0,sizeof ram); sink.calls=0;
     write_tag(ram+0x100,1,PS2_DMA_TAG_REF,0x300);
@@ -65,14 +65,14 @@ int main(void)
     ps2_dma_chain_reset(&s,0x100);
     assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,2,1,0)==1);
     assert(sink.last[0]==0x20u && sink.last[15]==0x2fu);
-    assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,2,1)==2);
+    assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,2,1,0)==2);
     memset(ram,0,sizeof ram); sink.calls=0;
     write_tag(ram+0x100,1,PS2_DMA_TAG_REFE,0x380);
     for(i=0;i<16u;i++)ram[0x380u+i]=(uint8_t)(0x50u+i);
     ps2_dma_chain_reset(&s,0x100);
     assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,3,1,0)==1);
     assert(sink.last[0]==0x50u && sink.last[15]==0x5fu);
-    assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,3,1)==2);
+    assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,3,1,0)==2);
 
     memset(ram,0,sizeof ram); sink.calls=0;
     write_tag(ram+0x100,0,PS2_DMA_TAG_NEXT,0x240);
@@ -88,13 +88,13 @@ int main(void)
     ps2_dma_chain_reset(&s,0x100);
     assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,5,1,0)==1);
     assert(sink.last[0]==0x60u && sink.last[15]==0x6fu);
-    assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,5,1)==2);
+    assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,5,1,0)==2);
 
     memset(ram,0,sizeof ram); write_tag(ram+0x100,0,PS2_DMA_TAG_RET,0);
     ps2_dma_chain_reset(&s,0x100);
-    assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,0,1)==-6);
+    assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,0,1,0)==-6);
     ps2_dma_chain_reset(&s,0x10000);
-    assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,0,1)==-2);
+    assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,0,1,0)==-2);
     /* Tag IRQ only halts at the tag boundary when TIE is enabled. */
     memset(ram,0,sizeof ram);
     write_tag(ram+0x100,1,PS2_DMA_TAG_CNT,0);
@@ -104,6 +104,16 @@ int main(void)
     ps2_dma_chain_reset(&s,0x100);
     assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,6,1,1)==1);
     assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,6,1,1)==2);
+    assert(s.finished);
+    /* The same tag IRQ is ignored when CHCR TIE is clear. */
+    memset(ram,0,sizeof ram);
+    write_tag(ram+0x100,1,PS2_DMA_TAG_CNT,0);
+    ram[0x103]|=0x80u;
+    for(i=0;i<16u;i++)ram[0x110u+i]=(uint8_t)(0xb0u+i);
+    write_tag(ram+0x120,0,PS2_DMA_TAG_END,0);
+    ps2_dma_chain_reset(&s,0x100);
+    assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,7,1,0)==1);
+    assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,7,1,0)==2);
     assert(s.finished);
     puts("OK: DMA chain tags, CALL/RET, REF and IRQ/TIE boundary tests.");
     return 0;

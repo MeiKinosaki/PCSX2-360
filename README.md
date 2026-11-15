@@ -86,3 +86,11 @@ O job Xenon do GitHub Actions usa runner self-hosted com labels `linux` e `xenon
 ## Regras de progresso
 
 Código importado não significa integração completa. Testes importados não significam aprovação no novo repositório. Build host, build Xenon, geração do XEX e execução no console são marcos separados.
+
+## DMA, dispositivos e IOP — checkpoint experimental
+
+A etapa atual acrescenta motor incremental de tags DMA (REFE/CNT/NEXT/REF/REFS/CALL/RET/END), pilha CALL/RET de dois níveis, DPCR/DICR experimentais, entrega de conclusão DMA ao Cause.IP2, filas qword isoladas para VIF0/VIF1/GIF/SIF0/SIF1/SIF2 com adaptador DMA, subconjunto inicial de instruções inteiras IOP R3000A e scheduler EE/IOP/DMA com razão provisória 1:8. Os novos testes estão integrados ao alvo `make check`.
+
+**Limitações importantes:** chain mode ainda não está ligado ao estado CHCR.MOD de cada canal; TTE/TIE, IRQ por tag, SPR e detalhes do DMAC aguardam validação diferencial. As filas não implementam decodificação de comandos VIF, pacotes GIF nem protocolo SIF real. O IOP cobre apenas um subconjunto de instruções e não possui exceções/COP0/timers/IRQ próprios. A ordem de eventos e razão de clock do scheduler são provisórias. O workflow push deve executar `make check`, mas ainda não há resultado de CI confirmado para estes commits. O build Xenon continua dependente de runner self-hosted; não existe XEX validado neste marco.
+
+Detalhes: [docs/DMA_IOP_SCHEDULER_STATUS.md](docs/DMA_IOP_SCHEDULER_STATUS.md).

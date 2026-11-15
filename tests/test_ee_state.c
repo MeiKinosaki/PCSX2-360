@@ -1024,7 +1024,7 @@ int main(void)
       original.cycle_count = UINT64_C(987654321);
       size_t snapshot_size = 0u;
       assert(ps2_ee_state_save(&original, snapshot, sizeof(snapshot), &written) == 0);
-      assert(written == 16u + sizeof(original));
+      assert(written == PS2_EE_SNAPSHOT_MAX_SIZE);
       snapshot_size = written;
       /* A rejected save reports no bytes and leaves the output untouched. */
       {
@@ -1052,7 +1052,7 @@ int main(void)
     {
       ps2_ee_state_t saved, loaded;
       ps2_ee_tlb_arch_t saved_tlb, loaded_tlb;
-      uint8_t machine_blob[16u + sizeof(ps2_ee_state_t) + sizeof(ps2_ee_tlb_arch_t) + 4u + sizeof(ram)];
+      uint8_t machine_blob[16u + PS2_EE_SNAPSHOT_PAYLOAD_SIZE + 1u + 48u * 25u + 4u + sizeof(ram)];
       size_t blob_size = 0u;
       uint32_t eh = UINT32_C(0x0012302a);
       ps2_ee_reset(&saved);

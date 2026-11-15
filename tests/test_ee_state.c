@@ -915,6 +915,10 @@ int main(void)
         assert(cpu.epc == UINT32_C(0x20));
         assert((cpu.cause & UINT32_C(0x80000000)) != 0u);
         assert(cpu.pc == UINT32_C(0x80000180));
+        /* Restore the valid mapping for following independent branch tests. */
+        assert(ps2_ee_tlb_arch_write_indexed(&code_tlb, 0u,
+            UINT32_C(0x00000003), (UINT32_C(1) << 6) | 7u,
+            (UINT32_C(2) << 6) | 7u) == PS2_EE_TLB_OK);
       }
 
       /* A successful taken branch executes exactly one delay-slot instruction,

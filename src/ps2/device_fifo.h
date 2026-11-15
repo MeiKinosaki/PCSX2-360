@@ -14,10 +14,15 @@ typedef struct ps2_device_fifo {
     unsigned read_index, write_index, count;
 } ps2_device_fifo_t;
 typedef struct ps2_device_fifos { ps2_device_fifo_t fifo[PS2_FIFO_COUNT]; } ps2_device_fifos_t;
+typedef struct ps2_device_fifo_endpoint {
+    ps2_device_fifos_t *fifos;
+    ps2_device_fifo_id_t id;
+} ps2_device_fifo_endpoint_t;
 void ps2_device_fifos_reset(ps2_device_fifos_t *fifos);
 int ps2_device_fifo_push(ps2_device_fifos_t *fifos, ps2_device_fifo_id_t id,
                          const uint8_t qword[PS2_DEVICE_FIFO_QWORD_BYTES]);
 int ps2_device_fifo_pop(ps2_device_fifos_t *fifos, ps2_device_fifo_id_t id,
                         uint8_t qword[PS2_DEVICE_FIFO_QWORD_BYTES]);
+int ps2_device_fifo_dma_transfer(void *opaque,unsigned channel,uint8_t qword[16],int direction);
 size_t ps2_device_fifo_count(const ps2_device_fifos_t *fifos, ps2_device_fifo_id_t id);
 #endif

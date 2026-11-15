@@ -5,6 +5,12 @@
 #include <stdio.h>
 #include <string.h>
 typedef struct dev { unsigned calls; uint8_t last[16]; } dev_t;
+static void write_tag(uint8_t *p,uint16_t qwc,unsigned id,uint32_t addr)
+{
+    uint64_t lo=(uint64_t)qwc|((uint64_t)id<<28)|((uint64_t)addr<<32);
+    unsigned i; memset(p,0,16u);
+    for(i=0;i<8u;i++)p[i]=(uint8_t)(lo>>(8u*i));
+}
 static int transfer(void *opaque,unsigned channel,uint8_t qword[16],int direction)
 {
     dev_t *d=(dev_t*)opaque; (void)channel; ++d->calls;
@@ -31,6 +37,20 @@ int main(void)
     dma.channel[5].qwc=1u;
     assert(ps2_dma_fabric_step_bus(&fabric,&dma,&bus,&serviced)==1);
     for(i=0;i<16u;i++) assert(scratch[i]==0xC3u);
-    puts("OK: DMA endpoint fabric through EE physical bus.");
+    /* Chain mode through the same fabric: CNT payload followed by END. */
+    memset(ram,0,sizeof ram); dev.calls=0;
+    write_tag(ram+64u,1u,PS2_DMA_TAG_CNT,0u);
+    for(i=0;i<16u;i++)ram[80u+i]=(uint8_t)(0x40u+i);
+    write_tag(ram+96u,0u,PS2_DMA_TAG_END,0u);
+    dma.channel[5].chcr=PS2_DMA_CHCR_STR|PS2_DMA_CHCR_DIR|(UINT32_C(1)<<2);
+    dma.channel[5].tadr=64u; dma.channel[5].qwc=0u;
+    assert(ps2_dma_fabric_step_bus(&fabric,&dma,&bus,&serviced)==1);
+    assert(serviced==5u && dev.calls==1u);
+    assert(dev.last[0]==0x40u && dev.last[15]==0x4fu);
+    assert(ps2_dma_fabric_take_completion(&fabric,5u)==0);
+    assert(ps2_dma_fabric_step_bus(&fabric,&dma,&bus,&serviced)==1);
+    assert((dma.channel[5].chcr&PS2_DMA_CHCR_STR)==0u);
+    assert(ps2_dma_fabric_take_completion(&fabric,5u)==1);
+    puts("OK: DMA endpoint fabric physical bus and CHCR chain-mode integration.");
     return 0;
 }

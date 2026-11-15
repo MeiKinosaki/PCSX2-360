@@ -40,6 +40,7 @@ O executável final obrigatório é **`build/default.xex`**. O arquivo ELF, quan
 - [x] Modelo inicial de biblioteca de jogos: cadastro limitado, proteção contra serial duplicado, favoritos e filtros por título/serial/gênero.
 - [x] Snapshot portátil experimental da biblioteca: formato versionado, campos em ordem fixa little-endian, checksum, validação de tamanho/strings/favoritos/seriais duplicados e validação antes de modificar o destino; regressões de round-trip e corrupção adicionadas (CI pendente).
 - [ ] Toolchain Xenon configurada e `default.xex` compilado.
+- [x] Primeiro scaffold de registradores DMA EE: 10 canais com CHCR/MADR/QWC/TADR, reset, leitura/escrita e detecção do bit STR; teste host incluído em `make check`. Não executa transferências, chain mode, arbitragem, interrupções nem dispositivos.
 - [x] Bloqueios técnicos e ordem de resolução documentados em `docs/KNOWN_BLOCKERS.md`.
 - [ ] Inicialização comprovada em Xbox 360 RGH/JTAG.
 - [ ] Emulação de jogos PS2.

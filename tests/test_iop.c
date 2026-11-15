@@ -22,6 +22,16 @@ int main(void)
     assert(ps2_iop_step(&s,&bus)==1 && m.words[16]==13u);
     assert(ps2_iop_step(&s,&bus)==1 && s.gpr[4]==13u);
     assert(s.gpr[0]==0u && s.cycle_count==5u);
-    puts("OK: IOP R3000A initial integer/load-store instruction tests.");
+    /* JAL writes the return address to r31 and executes its delay slot. */
+    memset(&m,0,sizeof m);
+    m.words[0]=UINT32_C(0x0c000004); /* jal 0x10 */
+    m.words[1]=UINT32_C(0x24050009); /* delay slot: addiu r5,zero,9 */
+    m.words[4]=UINT32_C(0x03e00008); /* jr r31 */
+    ps2_iop_reset(&s,0);
+    assert(ps2_iop_step(&s,&bus)==1);
+    assert(s.gpr[31]==8u && s.pc==4u && s.next_pc==16u);
+    assert(ps2_iop_step(&s,&bus)==1 && s.gpr[5]==9u && s.pc==16u);
+    assert(ps2_iop_step(&s,&bus)==1 && s.next_pc==8u);
+    puts("OK: IOP integer/load-store, JAL link and branch-delay tests.");
     return 0;
 }

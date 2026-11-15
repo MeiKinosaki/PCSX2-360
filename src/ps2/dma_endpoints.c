@@ -8,7 +8,7 @@ void ps2_dma_fabric_reset(ps2_dma_fabric_t *fabric)
 int ps2_dma_fabric_bind(ps2_dma_fabric_t *fabric, ps2_dma_endpoint_t endpoint,
                         ps2_dma_device_qword_fn transfer, void *opaque)
 {
-    if (fabric == 0 || endpoint < 0 || endpoint >= PS2_DMA_ENDPOINT_COUNT) return -1;
+    if (fabric == 0 || (unsigned)endpoint >= (unsigned)PS2_DMA_ENDPOINT_COUNT) return -1;
     fabric->endpoint[endpoint].transfer = transfer;
     fabric->endpoint[endpoint].opaque = opaque;
     return 0;

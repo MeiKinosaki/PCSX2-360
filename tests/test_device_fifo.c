@@ -19,6 +19,14 @@ int main(void)
     assert(ps2_device_fifo_push(&f,PS2_FIFO_SIF0,in)==-2);
     for(i=0;i<PS2_DEVICE_FIFO_CAPACITY;i++)assert(ps2_device_fifo_pop(&f,PS2_FIFO_SIF0,out)==0);
     assert(ps2_device_fifo_count(&f,PS2_FIFO_SIF0)==0u);
-    puts("OK: VIF/GIF/SIF isolated bounded FIFO tests.");
+    {
+        ps2_device_fifo_endpoint_t endpoint={&f,PS2_FIFO_GIF};
+        memset(out,0x33,sizeof out);
+        assert(ps2_device_fifo_dma_transfer(&endpoint,2u,in,1)==0);
+        memset(out,0,sizeof out);
+        assert(ps2_device_fifo_dma_transfer(&endpoint,2u,out,0)==0);
+        assert(memcmp(in,out,16u)==0);
+    }
+    puts("OK: VIF/GIF/SIF isolated FIFO and DMA endpoint adapter tests.");
     return 0;
 }

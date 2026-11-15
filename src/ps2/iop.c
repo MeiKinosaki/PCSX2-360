@@ -9,7 +9,7 @@ void ps2_iop_reset(ps2_iop_state_t *s,uint32_t pc)
 }
 int ps2_iop_step(ps2_iop_state_t *s,const ps2_iop_bus_t *bus)
 {
-    uint32_t ins,cur,op,rs,rt,rd,imm,target,a,b,result=0; int write=0;
+    uint32_t ins,cur,op,rs,rt,rd,imm,target,a,b,result=0,dest=0; int write=0;
     if(s==0 || bus==0 || bus->read32==0 || bus->write32==0)return -1;
     if(s->halted)return 0;
     cur=s->pc;
@@ -44,10 +44,11 @@ int ps2_iop_step(ps2_iop_state_t *s,const ps2_iop_bus_t *bus)
     case 0x04u:if(a==b)s->next_pc=s->pc+((uint32_t)(int32_t)(int16_t)imm<<2);break;
     case 0x05u:if(a!=b)s->next_pc=s->pc+((uint32_t)(int32_t)(int16_t)imm<<2);break;
     case 0x02u:target=((s->pc)&UINT32_C(0xf0000000))|((ins&UINT32_C(0x03ffffff))<<2);s->next_pc=target;break;
-    case 0x03u:result=s->pc+4u;write=1;rd=31u;target=((s->pc)&UINT32_C(0xf0000000))|((ins&UINT32_C(0x03ffffff))<<2);s->next_pc=target;break;
+    case 0x03u:result=s->pc+4u;write=1;dest=31u;target=((s->pc)&UINT32_C(0xf0000000))|((ins&UINT32_C(0x03ffffff))<<2);s->next_pc=target;break;
     default:return -3;
     }
-    if(op==0u && write && rd!=0u)s->gpr[rd]=result;
-    else if(write && rt!=0u)s->gpr[rt]=result;
+    if(op==0u && write)dest=rd;
+    else if(write && dest==0u)dest=rt;
+    if(write && dest!=0u)s->gpr[dest]=result;
     s->gpr[0]=0u;++s->cycle_count;return 1;
 }

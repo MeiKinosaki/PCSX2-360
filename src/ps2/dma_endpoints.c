@@ -46,3 +46,26 @@ int ps2_dma_fabric_take_completion(ps2_dma_fabric_t *fabric, unsigned channel)
     fabric->completion_pending &= (uint16_t)~bit;
     return pending;
 }
+
+int ps2_dma_fabric_step_bus(ps2_dma_fabric_t *fabric, ps2_dma_controller_t *dma,
+                            struct ps2_ee_bus *bus, unsigned *serviced_channel)
+{
+    unsigned n;
+    if (fabric == 0 || dma == 0 || bus == 0) return -1;
+    for (n=0; n<PS2_DMA_CHANNEL_COUNT; ++n) {
+        unsigned ch=(fabric->arbitration_cursor+n)%PS2_DMA_CHANNEL_COUNT;
+        ps2_dma_endpoint_slot_t *slot=&fabric->endpoint[ch];
+        int result;
+        if (ps2_dma_channel_started(dma,ch) != 1 || slot->transfer == 0) continue;
+        result=ps2_dma_step_bus(dma,ch,bus,slot->transfer,slot->opaque);
+        if (result < 0) return result;
+        if (result == 1) {
+            if (dma->channel[ch].qwc == 0u)
+                fabric->completion_pending |= (uint16_t)(1u<<ch);
+            fabric->arbitration_cursor=(ch+1u)%PS2_DMA_CHANNEL_COUNT;
+            if (serviced_channel != 0) *serviced_channel=ch;
+            return 1;
+        }
+    }
+    return 0;
+}

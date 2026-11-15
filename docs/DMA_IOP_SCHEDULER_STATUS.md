@@ -37,3 +37,13 @@ This milestone adds executable host-side scaffolding; it is not a complete PS2 D
 The Makefile's `make check` includes regression executables for DMA tags/chains, DPCR/DICR, device FIFO, IOP and scheduler, in addition to existing EE, bus and library tests. GitHub Actions is configured to run `make check` on pushes to main and pull requests. Do not call the milestone CI-approved until a run for the current commit is visible and successful.
 
 The Xenon XEX job remains manual and requires a provisioned self-hosted runner labelled `linux,xenon`; no `build/default.xex` is claimed by this milestone.
+
+
+## CHCR TIE and tag IRQ follow-up
+
+- CHCR TIE is defined as bit 7 and passed into the chain executor.
+- A tag IRQ stops chain execution at that tag boundary only when TIE is set; the fabric reports the channel completion to the existing DICR/EE interrupt path.
+- With TIE clear, the tag IRQ is ignored and chain execution proceeds.
+- Regression tests cover both enabled and disabled TIE behavior.
+- Chain execution errors now clear CHCR.STR and release the per-channel chain state rather than leaving a channel permanently started.
+- These changes are source-level changes only until the GitHub Actions host test job succeeds; exact DMAC IRQ timing still needs hardware/differential validation.

@@ -59,11 +59,29 @@ int ps2_dma_fabric_step_bus(ps2_dma_fabric_t *fabric, ps2_dma_controller_t *dma,
         if (ps2_dma_channel_started(dma,ch) != 1 || slot->transfer == 0) continue;
         { unsigned bank=ch<7u?0u:1u; unsigned local=ch<7u?ch:ch-7u;
           if ((dma->dpcr[bank] & (UINT32_C(8)<<(local*4u)))==0u) continue; }
-        result=ps2_dma_step_bus(dma,ch,bus,slot->transfer,slot->opaque);
+        if ((dma->channel[ch].chcr & PS2_DMA_CHCR_MOD_MASK)==(UINT32_C(1)<<2)) {
+            uint16_t bit=(uint16_t)(1u<<ch);
+            if ((fabric->chain_initialized & bit)==0u) {
+                ps2_dma_chain_reset(&fabric->chain[ch],dma->channel[ch].tadr);
+                fabric->chain_initialized|=bit;
+            }
+            result=ps2_dma_chain_step(&fabric->chain[ch],bus,slot->transfer,
+                                      slot->opaque,ch,
+                                      (dma->channel[ch].chcr&PS2_DMA_CHCR_DIR)!=0u);
+            if(result==2) {
+                dma->channel[ch].chcr&=~PS2_DMA_CHCR_STR;
+                fabric->chain_initialized&=(uint16_t)~bit;
+                fabric->completion_pending|=bit;
+                result=1;
+            }
+            dma->channel[ch].tadr=fabric->chain[ch].tag_address;
+        } else {
+            result=ps2_dma_step_bus(dma,ch,bus,slot->transfer,slot->opaque);
+            if(result==1 && dma->channel[ch].qwc==0u)
+                fabric->completion_pending|=(uint16_t)(1u<<ch);
+        }
         if (result < 0) return result;
         if (result == 1) {
-            if (dma->channel[ch].qwc == 0u)
-                fabric->completion_pending |= (uint16_t)(1u<<ch);
             fabric->arbitration_cursor=(ch+1u)%PS2_DMA_CHANNEL_COUNT;
             if (serviced_channel != 0) *serviced_channel=ch;
             return 1;

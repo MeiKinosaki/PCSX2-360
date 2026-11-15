@@ -1,6 +1,7 @@
 #ifndef PCSX2_360_DMA_ENDPOINTS_H
 #define PCSX2_360_DMA_ENDPOINTS_H
 #include "dma.h"
+struct ps2_ee_bus;
 typedef enum ps2_dma_endpoint {
     PS2_DMA_ENDPOINT_VIF0=0, PS2_DMA_ENDPOINT_VIF1, PS2_DMA_ENDPOINT_GIF,
     PS2_DMA_ENDPOINT_IPU_FROM, PS2_DMA_ENDPOINT_IPU_TO,
@@ -22,5 +23,7 @@ int ps2_dma_fabric_bind(ps2_dma_fabric_t *fabric, ps2_dma_endpoint_t endpoint,
                         ps2_dma_device_qword_fn transfer, void *opaque);
 int ps2_dma_fabric_step(ps2_dma_fabric_t *fabric, ps2_dma_controller_t *dma,
                         uint8_t *ee_ram, size_t ee_ram_size, unsigned *serviced_channel);
+int ps2_dma_fabric_step_bus(ps2_dma_fabric_t *fabric, ps2_dma_controller_t *dma,
+                            struct ps2_ee_bus *bus, unsigned *serviced_channel);
 int ps2_dma_fabric_take_completion(ps2_dma_fabric_t *fabric, unsigned channel);
 #endif

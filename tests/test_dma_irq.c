@@ -19,9 +19,10 @@ int main(void)
     assert(ps2_dma_irq_pending(&dma,0u)==1);
     assert(ps2_dma_write_dicr(&dma,0u,1u<<16)==0);
     assert(ps2_dma_irq_pending(&dma,0u)==0);
-    assert(ps2_dma_write_dicr(&dma,1u,(1u<<24)|(1u<<8))==0);
+    assert(ps2_dma_write_dicr(&dma,1u,(1u<<24)|(1u<<10))==0);
     assert(ps2_dma_complete_channel(&dma,9u,&ee)==0);
     assert((dma.dicr[1]&(1u<<18))!=0u);
+    assert((dma.dicr[1]&(1u<<31))!=0u);
     assert((ee.cause&(1u<<10))!=0u);
     assert(ps2_dma_write_dicr(&dma,2u,0u)==-1);
     assert(ps2_dma_set_channel_priority(&dma,10u,1u,1)==-1);

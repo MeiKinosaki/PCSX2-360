@@ -21,7 +21,7 @@ static uint32_t checksum(const uint8_t *p, size_t n)
     return h;
 }
 
-#define EE_SNAPSHOT_BYTES (PS2_EE_GPR_COUNT * 8u + 2u * 8u + 3u * 4u + 1u + 12u * 4u + 8u)
+#define EE_SNAPSHOT_BYTES PS2_EE_SNAPSHOT_PAYLOAD_SIZE
 #define TLB_ENTRY_BYTES 25u
 #define TLB_SNAPSHOT_BYTES (1u + 48u * TLB_ENTRY_BYTES)
 
@@ -167,15 +167,16 @@ int ps2_ee_machine_snapshot_save(const ps2_ee_state_t *state, const ps2_ee_tlb_a
     size_t payload,total; uint8_t *p;
     if(written) *written=0u;
     if(!state || !tlb || !memory || !memory->ram || !out || !written) return -1;
+    if(!snapshot_tlb_valid(tlb)) return -4;
+    if(state->gpr[0]!=0u || state->in_delay_slot>1u) return -5;
     if(memory->ram_size>UINT32_MAX ||
-       memory->ram_size>SIZE_MAX-sizeof(*state)-sizeof(*tlb)-4u-SNAPSHOT_HEADER_SIZE) return -2;
-    payload=sizeof(*state)+sizeof(*tlb)+4u+memory->ram_size;
+       memory->ram_size>SIZE_MAX-EE_SNAPSHOT_BYTES-TLB_SNAPSHOT_BYTES-4u-SNAPSHOT_HEADER_SIZE) return -2;
+    payload=EE_SNAPSHOT_BYTES+TLB_SNAPSHOT_BYTES+4u+memory->ram_size;
     total=SNAPSHOT_HEADER_SIZE+payload;
     if(capacity<total) return -3;
-    put_u32(out,SNAPSHOT_MAGIC_MACHINE); put_u32(out+4,1u); put_u32(out+8,(uint32_t)payload);
-    p=out+SNAPSHOT_HEADER_SIZE;
-    memcpy(p,state,sizeof(*state)); p+=sizeof(*state);
-    memcpy(p,tlb,sizeof(*tlb)); p+=sizeof(*tlb);
+    put_u32(out,SNAPSHOT_MAGIC_MACHINE); put_u32(out+4,2u); put_u32(out+8,(uint32_t)payload);
+    p=encode_ee(out+SNAPSHOT_HEADER_SIZE,state);
+    p=encode_tlb(p,tlb);
     put_u32(p,(uint32_t)memory->ram_size); p+=4;
     memcpy(p,memory->ram,memory->ram_size);
     put_u32(out+12,checksum(out+SNAPSHOT_HEADER_SIZE,payload));
@@ -190,18 +191,18 @@ int ps2_ee_machine_snapshot_load(ps2_ee_state_t *state, ps2_ee_tlb_arch_t *tlb,
     uint32_t payload,ram_size; const uint8_t *p;
     if(!state || !tlb || !memory || !memory->ram || !data) return -1;
     if(size<SNAPSHOT_HEADER_SIZE || get_u32(data)!=SNAPSHOT_MAGIC_MACHINE) return -2;
-    if(get_u32(data+4)!=1u) return -3;
+    if(get_u32(data+4)!=2u) return -3;
     payload=get_u32(data+8);
     if(size!=SNAPSHOT_HEADER_SIZE+(size_t)payload) return -4;
     if(checksum(data+SNAPSHOT_HEADER_SIZE,payload)!=get_u32(data+12)) return -5;
-    if(payload<sizeof(candidate_state)+sizeof(candidate_tlb)+4u) return -6;
+    if(payload<EE_SNAPSHOT_BYTES+TLB_SNAPSHOT_BYTES+4u) return -6;
     p=data+SNAPSHOT_HEADER_SIZE;
-    memcpy(&candidate_state,p,sizeof(candidate_state)); p+=sizeof(candidate_state);
-    memcpy(&candidate_tlb,p,sizeof(candidate_tlb)); p+=sizeof(candidate_tlb);
+    p=decode_ee(&candidate_state,p);
+    p=decode_tlb(&candidate_tlb,p);
     ram_size=get_u32(p); p+=4;
     if(ram_size!=memory->ram_size ||
-       payload!=sizeof(candidate_state)+sizeof(candidate_tlb)+4u+(size_t)ram_size) return -7;
-    if(candidate_state.gpr[0]!=0u) return -8;
+       payload!=EE_SNAPSHOT_BYTES+TLB_SNAPSHOT_BYTES+4u+(size_t)ram_size) return -7;
+    if(candidate_state.gpr[0]!=0u || candidate_state.in_delay_slot>1u) return -8;
     if(!snapshot_tlb_valid(&candidate_tlb)) return -9;
     /* Commit only after the entire payload and every TLB slot are validated. */
     memcpy(memory->ram,p,ram_size);

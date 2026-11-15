@@ -21,6 +21,81 @@ static uint32_t checksum(const uint8_t *p, size_t n)
     return h;
 }
 
+#define EE_SNAPSHOT_BYTES (PS2_EE_GPR_COUNT * 8u + 2u * 8u + 3u * 4u + 1u + 12u * 4u + 8u)
+#define TLB_ENTRY_BYTES 25u
+#define TLB_SNAPSHOT_BYTES (1u + 48u * TLB_ENTRY_BYTES)
+
+static void put_u64(uint8_t *p, uint64_t v)
+{
+    put_u32(p, (uint32_t)v);
+    put_u32(p + 4, (uint32_t)(v >> 32));
+}
+static uint64_t get_u64(const uint8_t *p)
+{
+    return (uint64_t)get_u32(p) | ((uint64_t)get_u32(p + 4) << 32);
+}
+static uint8_t *encode_ee(uint8_t *p, const ps2_ee_state_t *s)
+{
+    unsigned i;
+    for (i = 0; i < PS2_EE_GPR_COUNT; ++i, p += 8) put_u64(p, s->gpr[i]);
+    put_u64(p, s->hi); p += 8; put_u64(p, s->lo); p += 8;
+#define PUT_EE32(field) do { put_u32(p, s->field); p += 4; } while (0)
+    PUT_EE32(pc); PUT_EE32(next_pc); PUT_EE32(branch_pc);
+    *p++ = s->in_delay_slot;
+    PUT_EE32(cause); PUT_EE32(status); PUT_EE32(epc); PUT_EE32(badvaddr);
+    PUT_EE32(cp0_context); PUT_EE32(cp0_index); PUT_EE32(cp0_random);
+    PUT_EE32(cp0_entry_lo0); PUT_EE32(cp0_entry_lo1); PUT_EE32(cp0_page_mask);
+    PUT_EE32(cp0_wired); PUT_EE32(cp0_entry_hi);
+#undef PUT_EE32
+    put_u64(p, s->cycle_count); p += 8;
+    return p;
+}
+static const uint8_t *decode_ee(ps2_ee_state_t *s, const uint8_t *p)
+{
+    unsigned i;
+    memset(s, 0, sizeof(*s));
+    for (i = 0; i < PS2_EE_GPR_COUNT; ++i, p += 8) s->gpr[i] = get_u64(p);
+    s->hi = get_u64(p); p += 8; s->lo = get_u64(p); p += 8;
+#define GET_EE32(field) do { s->field = get_u32(p); p += 4; } while (0)
+    GET_EE32(pc); GET_EE32(next_pc); GET_EE32(branch_pc);
+    s->in_delay_slot = *p++;
+    GET_EE32(cause); GET_EE32(status); GET_EE32(epc); GET_EE32(badvaddr);
+    GET_EE32(cp0_context); GET_EE32(cp0_index); GET_EE32(cp0_random);
+    GET_EE32(cp0_entry_lo0); GET_EE32(cp0_entry_lo1); GET_EE32(cp0_page_mask);
+    GET_EE32(cp0_wired); GET_EE32(cp0_entry_hi);
+#undef GET_EE32
+    s->cycle_count = get_u64(p); p += 8;
+    return p;
+}
+static uint8_t *encode_tlb(uint8_t *p, const ps2_ee_tlb_arch_t *t)
+{
+    unsigned i;
+    *p++ = t->current_asid;
+    for (i = 0; i < 48u; ++i) {
+        const ps2_ee_tlb_pair_entry_t *e = &t->entries[i];
+        put_u32(p, e->vpn2); p += 4; put_u32(p, e->page_mask); p += 4;
+        *p++ = e->asid; *p++ = e->global; *p++ = e->present;
+#define PUT_HALF(h) do { put_u32(p, e->h.physical_page); p += 4; *p++ = e->h.valid; *p++ = e->h.dirty; *p++ = e->h.global; } while (0)
+        PUT_HALF(even_page); PUT_HALF(odd_page);
+#undef PUT_HALF
+    }
+    return p;
+}
+static const uint8_t *decode_tlb(ps2_ee_tlb_arch_t *t, const uint8_t *p)
+{
+    unsigned i;
+    memset(t, 0, sizeof(*t)); t->current_asid = *p++;
+    for (i = 0; i < 48u; ++i) {
+        ps2_ee_tlb_pair_entry_t *e = &t->entries[i];
+        e->vpn2 = get_u32(p); p += 4; e->page_mask = get_u32(p); p += 4;
+        e->asid = *p++; e->global = *p++; e->present = *p++;
+#define GET_HALF(h) do { e->h.physical_page = get_u32(p); p += 4; e->h.valid = *p++; e->h.dirty = *p++; e->h.global = *p++; } while (0)
+        GET_HALF(even_page); GET_HALF(odd_page);
+#undef GET_HALF
+    }
+    return p;
+}
+
 /* Reject malformed serialized TLB slots before restoring any machine state. */
 static int snapshot_tlb_valid(const ps2_ee_tlb_arch_t *tlb)
 {
@@ -60,11 +135,11 @@ int ps2_ee_state_save(const ps2_ee_state_t *state, uint8_t *out, size_t capacity
     size_t payload, total;
     if(written) *written=0u;
     if(!state || !out || !written) return -1;
-    payload=sizeof(*state); total=SNAPSHOT_HEADER_SIZE+payload;
+    payload=EE_SNAPSHOT_BYTES; total=SNAPSHOT_HEADER_SIZE+payload;
     if(capacity<total) return -2;
-    put_u32(out,SNAPSHOT_MAGIC_EE); put_u32(out+4,PS2_EE_SNAPSHOT_VERSION);
+    put_u32(out,SNAPSHOT_MAGIC_EE); put_u32(out+4,2u);
     put_u32(out+8,(uint32_t)payload);
-    memcpy(out+SNAPSHOT_HEADER_SIZE,state,payload);
+    (void)encode_ee(out+SNAPSHOT_HEADER_SIZE,state);
     put_u32(out+12,checksum(out+SNAPSHOT_HEADER_SIZE,payload));
     *written=total;
     return 0;
@@ -75,12 +150,12 @@ int ps2_ee_state_load(ps2_ee_state_t *state, const uint8_t *data, size_t size)
     ps2_ee_state_t candidate; uint32_t payload;
     if(!state || !data) return -1;
     if(size<SNAPSHOT_HEADER_SIZE || get_u32(data)!=SNAPSHOT_MAGIC_EE) return -2;
-    if(get_u32(data+4)!=PS2_EE_SNAPSHOT_VERSION) return -3;
+    if(get_u32(data+4)!=2u) return -3;
     payload=get_u32(data+8);
-    if(payload!=sizeof(candidate) || size!=SNAPSHOT_HEADER_SIZE+(size_t)payload) return -4;
+    if(payload!=EE_SNAPSHOT_BYTES || size!=SNAPSHOT_HEADER_SIZE+(size_t)payload) return -4;
     if(checksum(data+SNAPSHOT_HEADER_SIZE,payload)!=get_u32(data+12)) return -5;
-    memcpy(&candidate,data+SNAPSHOT_HEADER_SIZE,sizeof(candidate));
-    if(candidate.gpr[0]!=0u) return -6;
+    (void)decode_ee(&candidate,data+SNAPSHOT_HEADER_SIZE);
+    if(candidate.gpr[0]!=0u || candidate.in_delay_slot>1u) return -6;
     *state=candidate;
     return 0;
 }

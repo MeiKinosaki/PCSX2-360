@@ -1028,6 +1028,31 @@ int main(void)
       assert(((cpu.cause >> 2) & 31u) == PS2_EE_EXC_MOD);
       assert(cpu.epc == UINT32_C(0x20));
 
+      /* Misaligned LW raises ADEL before TLB translation and records BadVAddr. */
+      ps2_ee_reset(&cpu);
+      cpu.cp0_entry_hi = 3u;
+      cpu.gpr[1] = 1u; /* effective address 0x21 */
+      cpu.pc = UINT32_C(0x24);
+      assert(ps2_ee_execute_memory_word_arch_tlb(&cpu, &fault_mem,
+          &fault_tlb, lw) == PS2_EE_STEP_EXCEPTION);
+      assert(cpu.badvaddr == UINT32_C(0x21));
+      assert(((cpu.cause >> 2) & 31u) == PS2_EE_EXC_ADEL);
+
+      /* Misaligned SW raises ADES and must not partially modify RAM. */
+      fault_ram[UINT32_C(0x20)] = UINT8_C(0xa5);
+      fault_ram[UINT32_C(0x21)] = UINT8_C(0x5a);
+      ps2_ee_reset(&cpu);
+      cpu.cp0_entry_hi = 3u;
+      cpu.gpr[1] = 1u;
+      cpu.gpr[2] = UINT32_C(0xdeadbeef);
+      cpu.pc = UINT32_C(0x24);
+      assert(ps2_ee_execute_memory_word_arch_tlb(&cpu, &fault_mem,
+          &fault_tlb, sw) == PS2_EE_STEP_EXCEPTION);
+      assert(cpu.badvaddr == UINT32_C(0x21));
+      assert(((cpu.cause >> 2) & 31u) == PS2_EE_EXC_ADES);
+      assert(fault_ram[UINT32_C(0x20)] == UINT8_C(0xa5));
+      assert(fault_ram[UINT32_C(0x21)] == UINT8_C(0x5a));
+
       /* An invalid even half causes TLBL on reads and TLBS on writes. */
       assert(ps2_ee_tlb_arch_write_indexed(&fault_tlb, 0u, 3u,
           (UINT32_C(1) << 6) | 4u, lo_odd_dirty) == PS2_EE_TLB_OK);

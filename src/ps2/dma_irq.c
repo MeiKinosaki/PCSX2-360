@@ -23,7 +23,7 @@ int ps2_dma_write_dicr(ps2_dma_controller_t *dma,unsigned bank,uint32_t value)
     old=dma->dicr[bank];
     /* W1C completion flags; control bits are writable, master flag is derived. */
     old &= ~(value & flag_mask);
-    old = (old & flag_mask) | (value & (DICR_MASTER_ENABLE|UINT32_C(0x00007f00)));
+    old = (old & flag_mask) | (value & (DICR_MASTER_ENABLE | (bank==0u?UINT32_C(0x00007f00):UINT32_C(0x00000700))));
     dma->dicr[bank]=old;
     return 0;
 }

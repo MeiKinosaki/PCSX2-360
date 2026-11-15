@@ -1,6 +1,7 @@
 #ifndef PCSX2_360_DMA_ENDPOINTS_H
 #define PCSX2_360_DMA_ENDPOINTS_H
 #include "dma.h"
+#include "dma_chain.h"
 struct ps2_ee_bus;
 typedef enum ps2_dma_endpoint {
     PS2_DMA_ENDPOINT_VIF0=0, PS2_DMA_ENDPOINT_VIF1, PS2_DMA_ENDPOINT_GIF,
@@ -17,6 +18,8 @@ typedef struct ps2_dma_fabric {
     ps2_dma_endpoint_slot_t endpoint[PS2_DMA_ENDPOINT_COUNT];
     unsigned arbitration_cursor;
     uint16_t completion_pending;
+    ps2_dma_chain_state_t chain[PS2_DMA_CHANNEL_COUNT];
+    uint16_t chain_initialized;
 } ps2_dma_fabric_t;
 void ps2_dma_fabric_reset(ps2_dma_fabric_t *fabric);
 int ps2_dma_fabric_bind(ps2_dma_fabric_t *fabric, ps2_dma_endpoint_t endpoint,

@@ -897,6 +897,26 @@ int main(void)
         assert(cpu.in_delay_slot == 0u);
       }
 
+      /* A TLB-invalid instruction fetch in a delay slot preserves BD/EPC. */
+      {
+        uint32_t beq = (UINT32_C(0x04) << 26) | 3u;
+        assert(ps2_ee_mem_store(&code_mem, UINT32_C(0x1020), 4u, beq) == 0);
+        ps2_ee_reset(&cpu);
+        cpu.cp0_entry_hi = 3u;
+        cpu.pc = UINT32_C(0x20);
+        cpu.next_pc = UINT32_C(0x24);
+        assert(ps2_ee_step_arch_tlb(&cpu, &code_mem, &code_tlb) == PS2_EE_STEP_OK);
+        assert(cpu.in_delay_slot == 1u);
+        assert(ps2_ee_tlb_arch_write_indexed(&code_tlb, 0u,
+            UINT32_C(0x00000003), (UINT32_C(1) << 6) | 4u,
+            (UINT32_C(2) << 6) | 7u) == PS2_EE_TLB_OK);
+        assert(ps2_ee_step_arch_tlb(&cpu, &code_mem, &code_tlb) == PS2_EE_STEP_EXCEPTION);
+        assert(cpu.badvaddr == UINT32_C(0x24));
+        assert(cpu.epc == UINT32_C(0x20));
+        assert((cpu.cause & UINT32_C(0x80000000)) != 0u);
+        assert(cpu.pc == UINT32_C(0x80000180));
+      }
+
       /* A successful taken branch executes exactly one delay-slot instruction,
          then resumes at the branch target (not target+4 or fall-through). */
       {

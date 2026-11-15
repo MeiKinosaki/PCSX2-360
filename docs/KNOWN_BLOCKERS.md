@@ -11,7 +11,7 @@ Este documento separa o que já existe no repositório do que ainda impede uma b
 - O núcleo EE continua parcial; não representa uma CPU R5900 completa.
 - A auditoria diferencial de exceções, PageMask, PFN, delay slots e semântica específica do R5900 continua aberta.
 - IOP, DMA, VU0/VU1, VIF, GIF, GS, SPU2 e CDVD ainda não formam uma máquina PS2 executável.
-- O snapshot atual serializa estruturas C diretamente e depende do ABI/tamanho de RAM do build. Antes de ser um formato portátil, precisa de serialização campo a campo, endian explícito e validação de todos os estados dos dispositivos.
+- O snapshot EE + TLB + RAM agora usa serialização campo a campo little-endian, versão 2 e checksum; o carregamento valida o TLB antes de alterar CPU/RAM. A implementação e os testes ainda aguardam execução confirmada no CI. O formato exige RAM de mesmo tamanho e ainda não inclui IOP/DMA/VU/GS nem persistência integrada ao runtime.
 
 ## Biblioteca e interface
 - Existe apenas o modelo de dados da biblioteca; ainda não há scanner real de ISO/CSO/CHD nem leitura de USB/HDD.

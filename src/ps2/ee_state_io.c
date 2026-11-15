@@ -137,7 +137,7 @@ int ps2_ee_state_save(const ps2_ee_state_t *state, uint8_t *out, size_t capacity
     if(!state || !out || !written) return -1;
     payload=EE_SNAPSHOT_BYTES; total=SNAPSHOT_HEADER_SIZE+payload;
     if(capacity<total) return -2;
-    put_u32(out,SNAPSHOT_MAGIC_EE); put_u32(out+4,2u);
+    put_u32(out,SNAPSHOT_MAGIC_EE); put_u32(out+4,PS2_EE_SNAPSHOT_VERSION);
     put_u32(out+8,(uint32_t)payload);
     (void)encode_ee(out+SNAPSHOT_HEADER_SIZE,state);
     put_u32(out+12,checksum(out+SNAPSHOT_HEADER_SIZE,payload));
@@ -150,7 +150,7 @@ int ps2_ee_state_load(ps2_ee_state_t *state, const uint8_t *data, size_t size)
     ps2_ee_state_t candidate; uint32_t payload;
     if(!state || !data) return -1;
     if(size<SNAPSHOT_HEADER_SIZE || get_u32(data)!=SNAPSHOT_MAGIC_EE) return -2;
-    if(get_u32(data+4)!=2u) return -3;
+    if(get_u32(data+4)!=PS2_EE_SNAPSHOT_VERSION) return -3;
     payload=get_u32(data+8);
     if(payload!=EE_SNAPSHOT_BYTES || size!=SNAPSHOT_HEADER_SIZE+(size_t)payload) return -4;
     if(checksum(data+SNAPSHOT_HEADER_SIZE,payload)!=get_u32(data+12)) return -5;

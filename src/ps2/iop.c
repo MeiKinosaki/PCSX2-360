@@ -47,7 +47,7 @@ int ps2_iop_step(ps2_iop_state_t *s,const ps2_iop_bus_t *bus)
     case 0x03u:result=s->pc+4u;write=1;rd=31u;target=((s->pc)&UINT32_C(0xf0000000))|((ins&UINT32_C(0x03ffffff))<<2);s->next_pc=target;break;
     default:return -3;
     }
-    if(write && rt!=0u)s->gpr[rt]=result;
     if(op==0u && write && rd!=0u)s->gpr[rd]=result;
+    else if(write && rt!=0u)s->gpr[rt]=result;
     s->gpr[0]=0u;++s->cycle_count;return 1;
 }

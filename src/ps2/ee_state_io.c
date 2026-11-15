@@ -22,7 +22,7 @@ static uint32_t checksum(const uint8_t *p, size_t n)
 }
 
 #define EE_SNAPSHOT_BYTES PS2_EE_SNAPSHOT_PAYLOAD_SIZE
-#define TLB_ENTRY_BYTES 25u
+#define TLB_ENTRY_BYTES 39u
 #define TLB_SNAPSHOT_BYTES (1u + 48u * TLB_ENTRY_BYTES)
 
 static void put_u64(uint8_t *p, uint64_t v)

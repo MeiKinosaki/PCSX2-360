@@ -848,6 +848,33 @@ int main(void)
       assert(ps2_ee_step_arch_tlb(&cpu, &code_mem, &code_tlb) == PS2_EE_STEP_OK);
       assert(cpu.pc == UINT32_C(0x24));
 
+      /* KSEG0 instruction fetch bypasses the TLB and aliases physical RAM. */
+      assert(ps2_ee_mem_store(&code_mem, UINT32_C(0x1020), 4u, 0u) == 0);
+      ps2_ee_reset(&cpu);
+      cpu.pc = UINT32_C(0x80001020);
+      cpu.next_pc = UINT32_C(0x80001024);
+      assert(ps2_ee_step_arch_tlb(&cpu, &code_mem, &code_tlb) == PS2_EE_STEP_OK);
+      assert(cpu.pc == UINT32_C(0x80001024));
+
+      /* Architectural load/store use the same direct-segment translation. */
+      {
+        uint32_t sw_direct = (UINT32_C(0x2b) << 26) | (1u << 21) | (2u << 16);
+        uint32_t lw_direct = (UINT32_C(0x23) << 26) | (1u << 21) | (3u << 16);
+        uint64_t direct_value = 0u;
+        ps2_ee_reset(&cpu);
+        cpu.pc = UINT32_C(0x100);
+        cpu.gpr[1] = UINT32_C(0x80001020);
+        cpu.gpr[2] = UINT32_C(0x13579bdf);
+        assert(ps2_ee_execute_memory_word_arch_tlb(&cpu, &code_mem, &code_tlb,
+            sw_direct) == PS2_EE_STEP_OK);
+        assert(ps2_ee_mem_load(&code_mem, UINT32_C(0x1020), 4u, &direct_value) == 0);
+        assert((uint32_t)direct_value == UINT32_C(0x13579bdf));
+        cpu.gpr[3] = 0u;
+        assert(ps2_ee_execute_memory_word_arch_tlb(&cpu, &code_mem, &code_tlb,
+            lw_direct) == PS2_EE_STEP_OK);
+        assert((uint32_t)cpu.gpr[3] == UINT32_C(0x13579bdf));
+      }
+
       /* A load fault in a branch delay slot sets Cause.BD and EPC to the branch. */
       {
         uint32_t beq = (UINT32_C(0x04) << 26) | 3u;

@@ -44,8 +44,8 @@ $(DMA_IRQ_TEST): src/ps2/dma_irq.c src/ps2/dma.c src/ps2/ee_bus.c src/ps2/ee_sta
 $(DMA_TEST): src/ps2/dma.c src/ps2/ee_bus.c src/ps2/dma.h src/ps2/ee_bus.h tests/test_dma.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -Isrc/ps2 src/ps2/dma.c src/ps2/ee_bus.c tests/test_dma.c -o $@
 
-$(DMA_BUS_TEST): src/ps2/dma.c src/ps2/dma_endpoints.c src/ps2/ee_bus.c src/ps2/dma.h src/ps2/dma_endpoints.h src/ps2/ee_bus.h tests/test_dma_bus.c | $(BUILD_DIR)
-	$(CC) $(CFLAGS) -Isrc/ps2 src/ps2/dma.c src/ps2/dma_endpoints.c src/ps2/ee_bus.c tests/test_dma_bus.c -o $@
+$(DMA_BUS_TEST): src/ps2/dma.c src/ps2/dma_irq.c src/ps2/dma_endpoints.c src/ps2/ee_bus.c src/ps2/ee_state.c src/ps2/dma.h src/ps2/dma_endpoints.h src/ps2/ee_bus.h src/ps2/ee_state.h tests/test_dma_bus.c | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -Isrc/ps2 src/ps2/dma.c src/ps2/dma_irq.c src/ps2/dma_endpoints.c src/ps2/ee_bus.c src/ps2/ee_state.c tests/test_dma_bus.c -o $@
 
 $(DMA_CHAIN_TEST): src/ps2/dma_chain.c src/ps2/dma_chain.h src/ps2/ee_bus.c src/ps2/ee_bus.h tests/test_dma_chain.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -Isrc/ps2 src/ps2/dma_chain.c src/ps2/ee_bus.c tests/test_dma_chain.c -o $@

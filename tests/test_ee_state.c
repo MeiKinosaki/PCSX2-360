@@ -917,6 +917,20 @@ int main(void)
       assert(ps2_ee_step_arch_tlb(&cpu, &code_mem, &code_tlb) == PS2_EE_STEP_EXCEPTION);
       assert(cpu.badvaddr == UINT32_C(0x8000));
       assert(((cpu.cause >> 2) & 31u) == PS2_EE_EXC_TLBL);
+      assert(cpu.pc == UINT32_C(0x80000000)); /* true miss uses refill vector */
+
+      /* A matching but invalid instruction page must use the general vector. */
+      assert(ps2_ee_tlb_arch_write_indexed(&code_tlb, 0u,
+          UINT32_C(0x00000003), (UINT32_C(1) << 6) | 4u,
+          (UINT32_C(2) << 6) | 7u) == PS2_EE_TLB_OK);
+      ps2_ee_reset(&cpu);
+      cpu.cp0_entry_hi = 3u;
+      cpu.pc = UINT32_C(0x20);
+      cpu.next_pc = UINT32_C(0x24);
+      assert(ps2_ee_step_arch_tlb(&cpu, &code_mem, &code_tlb) == PS2_EE_STEP_EXCEPTION);
+      assert(cpu.badvaddr == UINT32_C(0x20));
+      assert(((cpu.cause >> 2) & 31u) == PS2_EE_EXC_TLBL);
+      assert(cpu.pc == UINT32_C(0x80000180));
 
       /* An unaligned instruction address raises ADEL before TLB translation. */
       ps2_ee_reset(&cpu);

@@ -1,4 +1,5 @@
 #include "dma.h"
+#include "ee_bus.h"
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
@@ -81,6 +82,37 @@ int ps2_dma_step_memory(ps2_dma_controller_t *dma, unsigned channel,
     else memset(qword, 0, sizeof qword);
     if (device(opaque, channel, qword, direction) != 0) return -4;
     if (!direction) memcpy(ee_ram + ch->madr, qword, sizeof qword);
+    ch->madr += PS2_DMA_QWORD_BYTES;
+    --ch->qwc;
+    if (ch->qwc == 0u) ch->chcr &= ~PS2_DMA_CHCR_STR;
+    return 1;
+}
+
+int ps2_dma_step_bus(ps2_dma_controller_t *dma, unsigned channel,
+                     struct ps2_ee_bus *bus,
+                     ps2_dma_device_qword_fn device, void *opaque)
+{
+    ps2_dma_channel_t *ch;
+    uint8_t qword[PS2_DMA_QWORD_BYTES];
+    int direction, status;
+    if (dma == 0 || bus == 0 || device == 0 ||
+        channel >= PS2_DMA_CHANNEL_COUNT) return -1;
+    ch = &dma->channel[channel];
+    if ((ch->chcr & PS2_DMA_CHCR_STR) == 0u) return 0;
+    if ((ch->chcr & PS2_DMA_CHCR_MOD_MASK) != 0u) return -2;
+    if (ch->qwc == 0u) { ch->chcr &= ~PS2_DMA_CHCR_STR; return 0; }
+    if ((ch->madr & (PS2_DMA_QWORD_BYTES - 1u)) != 0u ||
+        ch->madr > UINT32_MAX - PS2_DMA_QWORD_BYTES) return -3;
+    direction = (ch->chcr & PS2_DMA_CHCR_DIR) != 0u;
+    if (direction) {
+        status = ps2_ee_bus_read(bus, ch->madr, qword, sizeof qword);
+        if (status != 0) return -5;
+    } else {
+        memset(qword, 0, sizeof qword);
+    }
+    if (device(opaque, channel, qword, direction) != 0) return -4;
+    if (!direction && ps2_ee_bus_write(bus, ch->madr, qword, sizeof qword) != 0)
+        return -5;
     ch->madr += PS2_DMA_QWORD_BYTES;
     --ch->qwc;
     if (ch->qwc == 0u) ch->chcr &= ~PS2_DMA_CHCR_STR;

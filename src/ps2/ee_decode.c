@@ -403,6 +403,12 @@ ps2_ee_step_result_t ps2_ee_step_arch_tlb(ps2_ee_state_t *s,
     if (s == NULL || mem == NULL || tlb == NULL) return PS2_EE_STEP_INVALID;
     instruction_pc = s->pc;
     was_delay_slot = s->in_delay_slot != 0u;
+    /* Asynchronous interrupts are sampled between instructions, not inside
+       an architecturally required branch delay slot. */
+    if (!was_delay_slot && ps2_ee_interrupt_pending(s)) {
+        ps2_ee_raise_exception_ex(s, instruction_pc, PS2_EE_EXC_INT, 0, 0);
+        return PS2_EE_STEP_EXCEPTION;
+    }
     if (was_delay_slot) delay_successor = s->next_pc;
     /* MIPS instruction fetch requires word alignment; preserve BD/EPC on delay-slot faults. */
     if ((instruction_pc & UINT32_C(3)) != 0u) {

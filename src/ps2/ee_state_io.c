@@ -23,6 +23,7 @@ static uint32_t checksum(const uint8_t *p, size_t n)
 
 #define EE_SNAPSHOT_BYTES PS2_EE_SNAPSHOT_PAYLOAD_SIZE
 #define TLB_ENTRY_BYTES 39u
+_Static_assert(TLB_ENTRY_BYTES == 4u + 4u + 3u + 2u * (4u + 3u), "TLB snapshot wire size mismatch");
 #define TLB_SNAPSHOT_BYTES (1u + 48u * TLB_ENTRY_BYTES)
 
 static void put_u64(uint8_t *p, uint64_t v)
@@ -135,6 +136,7 @@ int ps2_ee_state_save(const ps2_ee_state_t *state, uint8_t *out, size_t capacity
     size_t payload, total;
     if(written) *written=0u;
     if(!state || !out || !written) return -1;
+    if(state->gpr[0]!=0u || state->in_delay_slot>1u) return -3;
     payload=EE_SNAPSHOT_BYTES; total=SNAPSHOT_HEADER_SIZE+payload;
     if(capacity<total) return -2;
     put_u32(out,SNAPSHOT_MAGIC_EE); put_u32(out+4,PS2_EE_SNAPSHOT_VERSION);
@@ -174,7 +176,7 @@ int ps2_ee_machine_snapshot_save(const ps2_ee_state_t *state, const ps2_ee_tlb_a
     payload=EE_SNAPSHOT_BYTES+TLB_SNAPSHOT_BYTES+4u+memory->ram_size;
     total=SNAPSHOT_HEADER_SIZE+payload;
     if(capacity<total) return -3;
-    put_u32(out,SNAPSHOT_MAGIC_MACHINE); put_u32(out+4,2u); put_u32(out+8,(uint32_t)payload);
+    put_u32(out,SNAPSHOT_MAGIC_MACHINE); put_u32(out+4,PS2_EE_MACHINE_SNAPSHOT_VERSION); put_u32(out+8,(uint32_t)payload);
     p=encode_ee(out+SNAPSHOT_HEADER_SIZE,state);
     p=encode_tlb(p,tlb);
     put_u32(p,(uint32_t)memory->ram_size); p+=4;
@@ -191,7 +193,7 @@ int ps2_ee_machine_snapshot_load(ps2_ee_state_t *state, ps2_ee_tlb_arch_t *tlb,
     uint32_t payload,ram_size; const uint8_t *p;
     if(!state || !tlb || !memory || !memory->ram || !data) return -1;
     if(size<SNAPSHOT_HEADER_SIZE || get_u32(data)!=SNAPSHOT_MAGIC_MACHINE) return -2;
-    if(get_u32(data+4)!=2u) return -3;
+    if(get_u32(data+4)!=PS2_EE_MACHINE_SNAPSHOT_VERSION) return -3;
     payload=get_u32(data+8);
     if(size!=SNAPSHOT_HEADER_SIZE+(size_t)payload) return -4;
     if(checksum(data+SNAPSHOT_HEADER_SIZE,payload)!=get_u32(data+12)) return -5;

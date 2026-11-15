@@ -81,7 +81,11 @@ int ps2_dma_fabric_step_bus(ps2_dma_fabric_t *fabric, ps2_dma_controller_t *dma,
             if(result==1 && dma->channel[ch].qwc==0u)
                 fabric->completion_pending|=(uint16_t)(1u<<ch);
         }
-        if (result < 0) return result;
+        if (result < 0) {
+            dma->channel[ch].chcr &= ~PS2_DMA_CHCR_STR;
+            fabric->chain_initialized &= (uint16_t)~(uint16_t)(1u<<ch);
+            return result;
+        }
         if (result == 1) {
             fabric->arbitration_cursor=(ch+1u)%PS2_DMA_CHANNEL_COUNT;
             if (serviced_channel != 0) *serviced_channel=ch;

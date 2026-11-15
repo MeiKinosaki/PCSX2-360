@@ -2,9 +2,9 @@
 
 Projeto experimental de emulação de PlayStation 2 para Xbox 360 RGH/JTAG.
 
-**Versão de desenvolvimento: v0.3b — em andamento.**
+**Versão de desenvolvimento: v0.4b — em andamento (validação do novo snapshot pendente).**
 
-**Progresso global estimado: 25%.** Marco v0.3b: integração experimental de CP0/TLB e PageMask variável; CP0.Context, BadVAddr, Context.BadVPN2 e EntryHi.VPN2 nas exceções TLB; distinção entre TLB miss e entrada inválida; rastreamento do branch proprietário do delay slot, EPC/Cause.BD em exceções e retomada no destino do desvio. A regressão host `make check` foi aprovada no GitHub Actions para o commit `a70db3a1bc87694124747736eba7bc63e1fbaa4a` (run `43644957989`). O resultado valida apenas os testes host incluídos, não a precisão integral do R5900 nem a compatibilidade com jogos.
+**Progresso global estimado: 26%.** Marco v0.4b: serialização portátil little-endian v2 do estado EE, TLB de 48 entradas e RAM, com checksum e validação antes da restauração; testes de wire format, corrupção e invariantes foram adicionados, mas ainda aguardam execução confirmada no CI. O avanço não representa uma máquina PS2 completa. Marco anterior v0.3b: integração experimental de CP0/TLB e PageMask variável; CP0.Context, BadVAddr, Context.BadVPN2 e EntryHi.VPN2 nas exceções TLB; distinção entre TLB miss e entrada inválida; rastreamento do branch proprietário do delay slot, EPC/Cause.BD em exceções e retomada no destino do desvio. A regressão host `make check` foi aprovada no GitHub Actions para o commit `a70db3a1bc87694124747736eba7bc63e1fbaa4a` (run `43644957989`). O resultado valida apenas os testes host incluídos, não a precisão integral do R5900 nem a compatibilidade com jogos.
 
 
 ## Objetivo do build
@@ -34,7 +34,8 @@ O executável final obrigatório é **`build/default.xex`**. O arquivo ELF, quan
 - [x] Testes host para TLB pareada, ASID, permissões, busca sem correspondência, round-trip CP0/TLB, TLBWR e PageMask.
 - [x] Regressão host `make check` aprovada no CI do commit `933a44c` (run `43626390249`).
 - [ ] Auditoria diferencial completa da semântica R5900, incluindo PageMask, PFN, delay slots e exceções.
-- [x] Snapshot experimental de máquina: estado EE + TLB arquitetural de 48 entradas + RAM, cabeçalho versionado, tamanho e checksum; testes de round-trip e corrupção adicionados. Ainda é ABI local do build, exige RAM de mesmo tamanho e não inclui IOP/DMA/VU/GS nem persistência integrada ao runtime.
+- [ ] Confirmar `make check` no CI após a serialização portátil v2; a última consulta de status não apresentou verificações.
+- [x] Snapshot portátil experimental v2: estado EE + TLB arquitetural de 48 entradas + RAM serializados campo a campo em little-endian, cabeçalho versionado, tamanho e checksum; validação do TLB antes da restauração e testes de round-trip/corrupção/wire format adicionados. Execução desses novos testes no CI ainda pendente; exige RAM de mesmo tamanho e não inclui IOP/DMA/VU/GS nem persistência integrada ao runtime.
 - [ ] Integração de todas as instruções de memória e fetch no caminho principal da CPU.
 - [x] Modelo inicial de biblioteca de jogos: cadastro limitado, proteção contra serial duplicado, favoritos e filtros por título/serial/gênero.
 - [x] Snapshot portátil experimental da biblioteca: formato versionado, campos em ordem fixa little-endian, checksum, validação de tamanho/strings/favoritos/seriais duplicados e validação antes de modificar o destino; regressões de round-trip e corrupção adicionadas (CI pendente).

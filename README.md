@@ -2,9 +2,9 @@
 
 Projeto experimental de emulação de PlayStation 2 para Xbox 360 RGH/JTAG.
 
-**Versão de desenvolvimento: v0.4.4b — em andamento (validação do novo snapshot pendente).**
+**Versão de desenvolvimento: v0.4.5b — em andamento (validação do motor DMA e regressões pendente).**
 
-**Progresso global estimado: 30%.** Marco v0.4b: serialização portátil little-endian v2 do estado EE, TLB de 48 entradas e RAM, com checksum e validação antes da restauração; o tamanho do registro TLB foi corrigido para 25 bytes e a validação de terminadores NUL da biblioteca foi corrigida. As duas alterações foram relidas no GitHub, mas ainda aguardam execução confirmada no CI. O avanço não representa uma máquina PS2 completa. Marco anterior v0.3b: integração experimental de CP0/TLB e PageMask variável; CP0.Context, BadVAddr, Context.BadVPN2 e EntryHi.VPN2 nas exceções TLB; distinção entre TLB miss e entrada inválida; rastreamento do branch proprietário do delay slot, EPC/Cause.BD em exceções e retomada no destino do desvio. A regressão host `make check` foi aprovada no GitHub Actions para o commit `a70db3a1bc87694124747736eba7bc63e1fbaa4a` (run `43644957989`). O resultado valida apenas os testes host incluídos, não a precisão integral do R5900 nem a compatibilidade com jogos.
+**Progresso global estimado: 31%.** Marco v0.4b: serialização portátil little-endian v2 do estado EE, TLB de 48 entradas e RAM, com checksum e validação antes da restauração; o tamanho do registro TLB foi corrigido para 25 bytes e a validação de terminadores NUL da biblioteca foi corrigida. As duas alterações foram relidas no GitHub, mas ainda aguardam execução confirmada no CI. O avanço não representa uma máquina PS2 completa. Marco anterior v0.3b: integração experimental de CP0/TLB e PageMask variável; CP0.Context, BadVAddr, Context.BadVPN2 e EntryHi.VPN2 nas exceções TLB; distinção entre TLB miss e entrada inválida; rastreamento do branch proprietário do delay slot, EPC/Cause.BD em exceções e retomada no destino do desvio. A regressão host `make check` foi aprovada no GitHub Actions para o commit `a70db3a1bc87694124747736eba7bc63e1fbaa4a` (run `43644957989`). O resultado valida apenas os testes host incluídos, não a precisão integral do R5900 nem a compatibilidade com jogos.
 
 
 ## Objetivo do build
@@ -41,7 +41,7 @@ O executável final obrigatório é **`build/default.xex`**. O arquivo ELF, quan
 - [x] Modelo inicial de biblioteca de jogos: cadastro limitado, proteção contra serial duplicado, favoritos e filtros por título/serial/gênero.
 - [x] Snapshot portátil experimental da biblioteca: formato versionado, campos em ordem fixa little-endian, checksum, validação de tamanho/strings/favoritos/seriais duplicados e validação antes de modificar o destino; regressões de round-trip e corrupção adicionadas (CI pendente).
 - [ ] Toolchain Xenon configurada e `default.xex` compilado.
-- [x] Primeiro scaffold de registradores DMA EE: 10 canais com CHCR/MADR/QWC/TADR, reset, leitura/escrita e detecção do bit STR; teste host incluído em `make check`. Não executa transferências, chain mode, arbitragem, interrupções nem dispositivos.
+- [x] DMA EE experimental em modo normal: API `ps2_dma_step` processa no máximo um QWC de 16 bytes por chamada por callback de dispositivo; valida CHCR.MOD, alinhamento e overflow de MADR; avança MADR/QWC somente após callback bem-sucedido e limpa STR ao concluir. Testes cobrem progresso, direção, falha do endpoint, modo não suportado e desalinhamento. Ainda não acessa a RAM EE diretamente nem implementa FIFOs, arbitragem, IRQ, chain mode, tags ou integração com dispositivos; execução no CI pendente.
 - [x] Bloqueios técnicos e ordem de resolução documentados em `docs/KNOWN_BLOCKERS.md`.
 - [ ] Inicialização comprovada em Xbox 360 RGH/JTAG.
 - [ ] Emulação de jogos PS2.
@@ -73,9 +73,9 @@ O job Xenon do GitHub Actions usa runner self-hosted com labels `linux` e `xenon
 
 ## Próximas etapas
 
-1. Validar no CI o novo modelo de biblioteca e o snapshot EE; evoluir o save/load para formato portátil incluindo TLB/RAM/dispositivos e integrar no runtime. Consultar `docs/KNOWN_BLOCKERS.md` para bloqueios e critérios de conclusão.
+1. Executar `make check` no CI e corrigir regressões do snapshot EE, biblioteca e novo motor DMA; consultar `docs/KNOWN_BLOCKERS.md` para bloqueios e critérios de conclusão.
 2. Fechar o caminho de fetch, load/store e exceções com a TLB arquitetural no executor principal.
-3. Integrar scheduler EE, IOP e os dez canais DMA reais.
+3. Integrar o motor DMA à RAM EE e aos endpoints dos dispositivos; implementar chain mode, arbitragem e IRQ antes de avançar para scheduler EE e IOP.
 4. Desenvolver VU0/VU1, VIF, GIF, GS, SPU2 e CDVD.
 5. Criar backend gráfico Xenos e runtime Xbox 360.
 6. Configurar runner Xenon, gerar `build/default.xex` e testar no console.

@@ -22,7 +22,7 @@ static uint32_t checksum(const uint8_t *p, size_t n)
 }
 
 #define EE_SNAPSHOT_BYTES PS2_EE_SNAPSHOT_PAYLOAD_SIZE
-#define TLB_ENTRY_BYTES 39u
+#define TLB_ENTRY_BYTES 25u
 _Static_assert(TLB_ENTRY_BYTES == 4u + 4u + 3u + 2u * (4u + 3u), "TLB snapshot wire size mismatch");
 #define TLB_SNAPSHOT_BYTES (1u + 48u * TLB_ENTRY_BYTES)
 

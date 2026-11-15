@@ -8,6 +8,19 @@
 #include <stdint.h>
 #include <stdio.h>
 
+static uint32_t test_snapshot_checksum(const uint8_t *p, size_t n)
+{
+    uint32_t h = UINT32_C(2166136261);
+    size_t i;
+    for (i = 0; i < n; ++i) { h ^= p[i]; h *= UINT32_C(16777619); }
+    return h;
+}
+static void test_put_u32_le(uint8_t *p, uint32_t v)
+{
+    p[0] = (uint8_t)v; p[1] = (uint8_t)(v >> 8);
+    p[2] = (uint8_t)(v >> 16); p[3] = (uint8_t)(v >> 24);
+}
+
 int main(void)
 {
     ps2_ee_state_t s; uint8_t ram[64]={0}; ps2_ee_memory_t mem={ram,sizeof ram}; uint64_t loaded=0;
@@ -1064,8 +1077,24 @@ int main(void)
       ram[9] = UINT8_C(0x5a);
       assert(ps2_ee_machine_snapshot_save(&saved, &saved_tlb, &mem, machine_blob,
              sizeof(machine_blob), &blob_size) == 0);
-      /* A checksum-valid snapshot with an impossible PageMask is rejected
-         before CPU, TLB, or RAM state is changed. */
+      /* Corrupt the serialized TLB PageMask, then refresh checksum so the
+         loader reaches semantic validation rather than checksum rejection. */
+      {
+        uint8_t invalid_blob[sizeof(machine_blob)];
+        size_t page_mask_offset = 16u + PS2_EE_SNAPSHOT_PAYLOAD_SIZE +
+                                  1u + 4u * 25u + 4u;
+        memcpy(invalid_blob, machine_blob, blob_size);
+        invalid_blob[page_mask_offset] = 1u;
+        test_put_u32_le(invalid_blob + 12u,
+            test_snapshot_checksum(invalid_blob + 16u, blob_size - 16u));
+        ps2_ee_reset(&loaded);
+        loaded.pc = UINT32_C(0x76543210);
+        ram[9] = UINT8_C(0x44);
+        assert(ps2_ee_machine_snapshot_load(&loaded, &loaded_tlb, &mem,
+               invalid_blob, blob_size) == -9);
+        assert(loaded.pc == UINT32_C(0x76543210));
+        assert(ram[9] == UINT8_C(0x44));
+      }
       {
         ps2_ee_tlb_arch_t invalid_tlb = saved_tlb;
         uint8_t invalid_blob[sizeof(machine_blob)];

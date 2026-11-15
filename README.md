@@ -41,7 +41,10 @@ O executável final obrigatório é **`build/default.xex`**. O arquivo ELF, quan
 - [x] Modelo inicial de biblioteca de jogos: cadastro limitado, proteção contra serial duplicado, favoritos e filtros por título/serial/gênero.
 - [x] Snapshot portátil experimental da biblioteca: formato versionado, campos em ordem fixa little-endian, checksum, validação de tamanho/strings/favoritos/seriais duplicados e validação antes de modificar o destino; regressões de round-trip e corrupção adicionadas (CI pendente).
 - [ ] Toolchain Xenon configurada e `default.xex` compilado.
-- [x] DMA EE experimental em modo normal com transferência de dados: `ps2_dma_step_memory` copia um QWC de 16 bytes entre RAM EE fornecida pelo runtime e callback de dispositivo; DIR=1 envia RAM ao dispositivo e DIR=0 recebe dados do dispositivo para RAM. Valida modo, alinhamento, limites e overflow; só avança MADR/QWC após callback bem-sucedido. Testes cobrem cópia nos dois sentidos, conclusão, falha do endpoint e limites de RAM. Ainda não há mapeamento físico MEM1/MEM2, FIFOs reais, arbitragem, IRQ, chain mode, tags ou endpoints de dispositivos PS2; CI pendente.
+- [x] Barramento físico experimental EE: RAM principal de 32 MiB e Scratchpad de 16 KiB em `0x70000000`, com rejeição de endereços fora das regiões suportadas; não é ainda um mapa completo de registradores MMIO.
+- [x] DMA EE experimental em modo normal com acesso ao buffer de RAM e callback de dispositivo; valida alinhamento, limites e overflow. O barramento físico EE e a Scratchpad têm testes próprios, mas a DMA ainda não consome diretamente `ps2_ee_bus_t` nem resolve aliases/cache/MMIO.
+- [x] Fabric experimental de endpoints por canal para VIF0, VIF1, GIF, IPU, SIF0/1/2 e SPR; serviço round-robin de um QWC por chamada e eventos de conclusão por canal. Não implementa prioridades DPCR reais, registradores DICR, IRQ ligada ao CP0 ou FIFOs reais dos dispositivos.
+- [x] Decodificador do formato de tag DMA de 128 bits (QWC/PCE/ID/IRQ/ADDR/SPR) com teste de wire format. A execução de chain mode, CALL/RET stack, NEXT/REF/REFS e TTE/TIE continua pendente; decodificar tag não equivale a executar cadeia.
 - [x] Bloqueios técnicos e ordem de resolução documentados em `docs/KNOWN_BLOCKERS.md`.
 - [ ] Inicialização comprovada em Xbox 360 RGH/JTAG.
 - [ ] Emulação de jogos PS2.
@@ -75,7 +78,7 @@ O job Xenon do GitHub Actions usa runner self-hosted com labels `linux` e `xenon
 
 1. Executar `make check` no CI e corrigir regressões do snapshot EE, biblioteca e novo motor DMA; consultar `docs/KNOWN_BLOCKERS.md` para bloqueios e critérios de conclusão.
 2. Fechar o caminho de fetch, load/store e exceções com a TLB arquitetural no executor principal.
-3. Integrar o DMA experimental ao mapa físico MEM1/MEM2 e aos FIFOs/endpoints reais; implementar chain mode, arbitragem e IRQ antes de avançar para scheduler EE e IOP.
+3. Unificar `ps2_dma_step_memory` com `ps2_ee_bus_t`; implementar execução real de tags/chains (REFE/CNT/NEXT/REF/REFS/CALL/RET/END), prioridades DPCR, flags/máscaras DICR e entrega de IRQ ao CP0; substituir callbacks genéricos por FIFOs reais de VIF/GIF/SIF/IPU/SPR.
 4. Desenvolver VU0/VU1, VIF, GIF, GS, SPU2 e CDVD.
 5. Criar backend gráfico Xenos e runtime Xbox 360.
 6. Configurar runner Xenon, gerar `build/default.xex` e testar no console.

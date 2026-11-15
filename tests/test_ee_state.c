@@ -1047,6 +1047,16 @@ int main(void)
       assert(snapshot[16u + 256u + 16u] == UINT8_C(0x50));
       assert(snapshot[16u + 256u + 17u] == UINT8_C(0x34));
       assert(snapshot[16u + 256u + 18u] == UINT8_C(0x12));
+      /* Invalid EE architectural invariants must not produce an unloadable save. */
+      {
+        ps2_ee_state_t invalid = original;
+        uint8_t guard[PS2_EE_SNAPSHOT_MAX_SIZE];
+        memset(guard, 0x2a, sizeof(guard));
+        invalid.gpr[0] = 1u;
+        written = 44u;
+        assert(ps2_ee_state_save(&invalid, guard, sizeof(guard), &written) == -3);
+        assert(written == 0u && guard[0] == UINT8_C(0x2a));
+      }
       /* A rejected save reports no bytes and leaves the output untouched. */
       {
         uint8_t guard[16];

@@ -210,7 +210,7 @@ int pcsx2_game_library_load(pcsx2_game_library_t *library,
             !bounded_string_valid(genre, PCSX2_GAME_GENRE_MAX) ||
             !bounded_string_valid(image, PCSX2_GAME_PATH_MAX) ||
             !bounded_string_valid(cover, PCSX2_GAME_PATH_MAX) ||
-            title[0] == '\\0' || serial[0] == '\\0' || favorite > 1u)
+            title[0] == '\0' || serial[0] == '\0' || favorite > 1u)
             return -7;
         for (j = 0; j < i; ++j) {
             const uint8_t *previous = data + GAME_LIBRARY_HEADER_SIZE +

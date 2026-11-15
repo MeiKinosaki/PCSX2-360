@@ -7,6 +7,7 @@
 #define PS2_DMA_CHCR_MOD_MASK (UINT32_C(3) << 2)
 #define PS2_DMA_CHCR_STR (UINT32_C(1) << 8)
 #define PS2_DMA_QWORD_BYTES 16u
+struct ps2_ee_bus;
 typedef struct ps2_dma_channel { uint32_t chcr, madr, qwc, tadr; } ps2_dma_channel_t;
 typedef struct ps2_dma_controller {
     ps2_dma_channel_t channel[PS2_DMA_CHANNEL_COUNT];
@@ -34,4 +35,8 @@ int ps2_dma_step(ps2_dma_controller_t *dma, unsigned channel,
 int ps2_dma_step_memory(ps2_dma_controller_t *dma, unsigned channel,
                         uint8_t *ee_ram, size_t ee_ram_size,
                         ps2_dma_device_qword_fn device, void *opaque);
+/* Physical-bus variant: accesses EE RAM or Scratchpad through the EE bus map. */
+int ps2_dma_step_bus(ps2_dma_controller_t *dma, unsigned channel,
+                     struct ps2_ee_bus *bus,
+                     ps2_dma_device_qword_fn device, void *opaque);
 #endif

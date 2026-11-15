@@ -3,7 +3,7 @@
 #include <stdint.h>
 #define PS2_DMA_CHANNEL_COUNT 10u
 #define PS2_DMA_CHCR_DIR (UINT32_C(1) << 0)
-#define PS2_DMA_CHCR_MOD_MASK (UINT32_C(7) << 2)
+#define PS2_DMA_CHCR_MOD_MASK (UINT32_C(3) << 2)
 #define PS2_DMA_CHCR_STR (UINT32_C(1) << 8)
 #define PS2_DMA_QWORD_BYTES 16u
 typedef struct ps2_dma_channel { uint32_t chcr, madr, qwc, tadr; } ps2_dma_channel_t;

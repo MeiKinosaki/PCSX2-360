@@ -22,6 +22,7 @@ O executável final obrigatório é **`build/default.xex`**. O arquivo ELF, quan
 - [x] Primeira rota de exceções para falhas de dados do EE: TLB miss, Modified, ADEL, ADES e DBE no caminho experimental.
 - [x] Testes de regressão adicionados para TLB miss em leitura, acesso desalinhado e store em página somente leitura.
 - [x] Interface CP0 experimental para BadVAddr, Status, Cause e EPC.
+- [x] Modelo experimental de interrupções EE: elegibilidade por Status.IE/IM, Cause.IP e bloqueio por EXL/ERL; amostragem entre instruções e adiamento durante delay slot. A validação diferencial das particularidades R5900 e as fontes reais de IRQ ainda estão pendentes.
 - [x] Decodificação parcial de MFC0/MTC0 e testes de transferência/máscaras de escrita.
 - [x] Tabela TLB experimental ampliada para 48 slots e teste do índice 47.
 - [x] Modelo arquitetural experimental separado com 48 pares de páginas de 4 KiB (EntryHi, EntryLo0/1, ASID, V, D e G).

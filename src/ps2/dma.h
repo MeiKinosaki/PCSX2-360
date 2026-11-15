@@ -8,6 +8,7 @@
 #define PS2_DMA_CHCR_STR (UINT32_C(1) << 8)
 #define PS2_DMA_QWORD_BYTES 16u
 struct ps2_ee_bus;
+struct ps2_ee_state;
 typedef struct ps2_dma_channel { uint32_t chcr, madr, qwc, tadr; } ps2_dma_channel_t;
 typedef struct ps2_dma_controller {
     ps2_dma_channel_t channel[PS2_DMA_CHANNEL_COUNT];
@@ -27,6 +28,13 @@ int ps2_dma_read_channel(const ps2_dma_controller_t *dma, unsigned channel,
 int ps2_dma_write_channel(ps2_dma_controller_t *dma, unsigned channel,
                           ps2_dma_register_t reg, uint32_t value);
 int ps2_dma_channel_started(const ps2_dma_controller_t *dma, unsigned channel);
+/* Experimental DPCR/DICR register semantics and EE CP0 IP2 delivery. */
+int ps2_dma_set_channel_priority(ps2_dma_controller_t *dma, unsigned channel,
+                                 unsigned priority, int enabled);
+int ps2_dma_write_dicr(ps2_dma_controller_t *dma, unsigned bank, uint32_t value);
+int ps2_dma_complete_channel(ps2_dma_controller_t *dma, unsigned channel,
+                             struct ps2_ee_state *ee);
+int ps2_dma_irq_pending(const ps2_dma_controller_t *dma, unsigned bank);
 int ps2_dma_step(ps2_dma_controller_t *dma, unsigned channel,
                  ps2_dma_qword_transfer_fn transfer, void *opaque);
 /* Copies one QWC between EE RAM and a device callback. DIR=1 sends RAM to

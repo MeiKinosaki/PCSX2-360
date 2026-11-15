@@ -39,6 +39,25 @@ int main(void)
     assert(s.stack_depth==1u);
     assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,1,1)==2);
     assert(s.finished && s.stack_depth==0u);
+    /* Nested CALL/RET uses both return-stack entries in LIFO order. */
+    memset(ram,0,sizeof ram);
+    write_tag(ram+0x100,0,PS2_DMA_TAG_CALL,0x200);
+    write_tag(ram+0x110,0,PS2_DMA_TAG_END,0);
+    write_tag(ram+0x200,0,PS2_DMA_TAG_CALL,0x300);
+    write_tag(ram+0x210,0,PS2_DMA_TAG_RET,0);
+    write_tag(ram+0x300,0,PS2_DMA_TAG_RET,0);
+    ps2_dma_chain_reset(&s,0x100);
+    assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,1,1)==2);
+    assert(s.finished && s.stack_depth==0u);
+
+    /* A third nested CALL exceeds the two-entry hardware return stack. */
+    memset(ram,0,sizeof ram);
+    write_tag(ram+0x100,0,PS2_DMA_TAG_CALL,0x200);
+    write_tag(ram+0x200,0,PS2_DMA_TAG_CALL,0x300);
+    write_tag(ram+0x300,0,PS2_DMA_TAG_CALL,0x400);
+    ps2_dma_chain_reset(&s,0x100);
+    assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,1,1)==-5);
+
     memset(ram,0,sizeof ram); sink.calls=0;
     write_tag(ram+0x100,1,PS2_DMA_TAG_REF,0x300);
     for(i=0;i<16u;i++)ram[0x300u+i]=(uint8_t)(0x20u+i);

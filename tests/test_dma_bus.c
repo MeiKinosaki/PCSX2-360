@@ -20,6 +20,7 @@ int main(void)
     dev_t dev={0,{0}}; unsigned serviced=99u,i;
     ps2_dma_reset(&dma); ps2_dma_fabric_reset(&fabric);
     assert(ps2_dma_fabric_bind(&fabric,PS2_DMA_ENDPOINT_SIF0,transfer,&dev)==0);
+    assert(ps2_dma_set_channel_priority(&dma,5u,2u,1)==0);
     for(i=0;i<16u;i++) ram[32u+i]=(uint8_t)(i+3u);
     dma.channel[5].chcr=PS2_DMA_CHCR_STR|PS2_DMA_CHCR_DIR;
     dma.channel[5].madr=32u; dma.channel[5].qwc=1u;

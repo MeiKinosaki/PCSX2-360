@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 
 static uint32_t test_snapshot_checksum(const uint8_t *p, size_t n)
 {

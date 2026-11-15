@@ -36,7 +36,7 @@ O executável final obrigatório é **`build/default.xex`**. O arquivo ELF, quan
 - [ ] Auditoria diferencial completa da semântica R5900, incluindo PageMask, PFN, delay slots e exceções.
 - [ ] Confirmar `make check` no CI após a serialização portátil v2; a última consulta de status não apresentou verificações.
 - [x] Snapshot portátil experimental v2: estado EE + TLB arquitetural de 48 entradas + RAM serializados campo a campo em little-endian, cabeçalho versionado, tamanho e checksum; validação do TLB antes da restauração e testes de round-trip/corrupção/wire format adicionados. Execução desses novos testes no CI ainda pendente; exige RAM de mesmo tamanho e não inclui IOP/DMA/VU/GS nem persistência integrada ao runtime.
-- [ ] Integração de todas as instruções de memória e fetch no caminho principal da CPU.
+- [x] Caminho experimental unificado de fetch/load/store com TLB arquitetural: `ps2_ee_step_arch_tlb` traduz fetch e delega loads/stores ao executor arquitetural; testes agora cobrem aliases KSEG0, fetch/load/store direto, TLB miss e entrada inválida durante delay slot. Ainda faltam cobertura de todas as instruções, auditoria R5900 e validação CI.
 - [x] Modelo inicial de biblioteca de jogos: cadastro limitado, proteção contra serial duplicado, favoritos e filtros por título/serial/gênero.
 - [x] Snapshot portátil experimental da biblioteca: formato versionado, campos em ordem fixa little-endian, checksum, validação de tamanho/strings/favoritos/seriais duplicados e validação antes de modificar o destino; regressões de round-trip e corrupção adicionadas (CI pendente).
 - [ ] Toolchain Xenon configurada e `default.xex` compilado.

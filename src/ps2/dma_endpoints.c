@@ -57,6 +57,8 @@ int ps2_dma_fabric_step_bus(ps2_dma_fabric_t *fabric, ps2_dma_controller_t *dma,
         ps2_dma_endpoint_slot_t *slot=&fabric->endpoint[ch];
         int result;
         if (ps2_dma_channel_started(dma,ch) != 1 || slot->transfer == 0) continue;
+        { unsigned bank=ch<7u?0u:1u; unsigned local=ch<7u?ch:ch-7u;
+          if ((dma->dpcr[bank] & (UINT32_C(8)<<(local*4u)))==0u) continue; }
         result=ps2_dma_step_bus(dma,ch,bus,slot->transfer,slot->opaque);
         if (result < 0) return result;
         if (result == 1) {

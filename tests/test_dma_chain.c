@@ -3,20 +3,55 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+static void write_tag(uint8_t *p,uint16_t qwc,unsigned id,uint32_t addr)
+{
+    uint64_t lo=(uint64_t)qwc|((uint64_t)id<<28)|((uint64_t)addr<<32);
+    unsigned i; memset(p,0,16u);
+    for(i=0;i<8u;i++)p[i]=(uint8_t)(lo>>(8u*i));
+}
+typedef struct sink { unsigned calls; uint8_t last[16]; } sink_t;
+static int endpoint(void *opaque,unsigned channel,uint8_t q[16],int direction)
+{
+    sink_t *s=(sink_t*)opaque;(void)channel;++s->calls;
+    if(direction)memcpy(s->last,q,16u);else memset(q,0x6d,16u);
+    return 0;
+}
 int main(void)
 {
-    uint8_t raw[16]={0}; ps2_dma_tag_t tag;
-    uint64_t low=0;
-    low|=UINT64_C(0x2a)<<0; low|=UINT64_C(2)<<26;
-    low|=UINT64_C(5)<<28; low|=UINT64_C(1)<<31;
-    low|=UINT64_C(0x0012345)<<32; low|=UINT64_C(1)<<63;
-    for(unsigned i=0;i<8u;i++) raw[i]=(uint8_t)(low>>(i*8u));
-    raw[8]=0xef; raw[9]=0xbe;
-    assert(ps2_dma_tag_decode(raw,&tag)==0);
-    assert(tag.qwc==0x2au && tag.pce==2u && tag.id==PS2_DMA_TAG_CALL);
-    assert(tag.irq==1u && tag.spr==1u && tag.address==0x0012345u);
-    assert((tag.upper_data&0xffffu)==0xbeefu);
-    assert(ps2_dma_tag_decode(0, &tag)==-1);
-    puts("OK: EE DMA tag wire-format decode tests.");
+    uint8_t ram[4096]={0},scratch[PS2_EE_SCRATCHPAD_BYTES];
+    ps2_ee_bus_t bus={ram,sizeof ram,scratch,sizeof scratch};
+    ps2_dma_chain_state_t s; sink_t sink={0,{0}}; unsigned i;
+    write_tag(ram+0x100,1,PS2_DMA_TAG_CNT,0);
+    for(i=0;i<16u;i++)ram[0x110u+i]=(uint8_t)(i+1u);
+    write_tag(ram+0x120,0,PS2_DMA_TAG_END,0);
+    ps2_dma_chain_reset(&s,0x100);
+    assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,0,1)==1);
+    assert(sink.calls==1u && sink.last[0]==1u && sink.last[15]==16u);
+    assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,0,1)==2);
+    assert(s.finished && !s.active);
+    memset(ram,0,sizeof ram); sink.calls=0;
+    write_tag(ram+0x100,1,PS2_DMA_TAG_CALL,0x200);
+    for(i=0;i<16u;i++)ram[0x110u+i]=(uint8_t)(0x80u+i);
+    write_tag(ram+0x120,0,PS2_DMA_TAG_END,0);
+    write_tag(ram+0x200,0,PS2_DMA_TAG_RET,0);
+    ps2_dma_chain_reset(&s,0x100);
+    assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,1,1)==1);
+    assert(s.stack_depth==1u);
+    assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,1,1)==2);
+    assert(s.finished && s.stack_depth==0u);
+    memset(ram,0,sizeof ram); sink.calls=0;
+    write_tag(ram+0x100,1,PS2_DMA_TAG_REF,0x300);
+    for(i=0;i<16u;i++)ram[0x300u+i]=(uint8_t)(0x20u+i);
+    write_tag(ram+0x110,0,PS2_DMA_TAG_END,0);
+    ps2_dma_chain_reset(&s,0x100);
+    assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,2,1)==1);
+    assert(sink.last[0]==0x20u && sink.last[15]==0x2fu);
+    assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,2,1)==2);
+    memset(ram,0,sizeof ram); write_tag(ram+0x100,0,PS2_DMA_TAG_RET,0);
+    ps2_dma_chain_reset(&s,0x100);
+    assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,0,1)==-6);
+    ps2_dma_chain_reset(&s,0x10000);
+    assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,0,1)==-2);
+    puts("OK: DMA chain CNT/END, CALL/RET, REF and error-path tests.");
     return 0;
 }

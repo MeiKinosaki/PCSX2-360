@@ -5,6 +5,7 @@
 #define PS2_DMA_CHANNEL_COUNT 10u
 #define PS2_DMA_CHCR_DIR (UINT32_C(1) << 0)
 #define PS2_DMA_CHCR_MOD_MASK (UINT32_C(3) << 2)
+#define PS2_DMA_CHCR_TIE (UINT32_C(1) << 7)
 #define PS2_DMA_CHCR_STR (UINT32_C(1) << 8)
 #define PS2_DMA_QWORD_BYTES 16u
 struct ps2_ee_bus;

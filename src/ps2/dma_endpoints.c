@@ -25,7 +25,7 @@ int ps2_dma_fabric_step(ps2_dma_fabric_t *fabric, ps2_dma_controller_t *dma,
         int result;
         if (was_started != 1 || slot->transfer == 0) continue;
         result=ps2_dma_step_memory(dma,ch,ee_ram,ee_ram_size,slot->transfer,slot->opaque);
-        if (result < 0) return result;
+        if (result < 0) { dma->channel[ch].chcr&=~PS2_DMA_CHCR_STR; fabric->chain_initialized&=(uint16_t)~(uint16_t)(1u<<ch); return result; }
         if (result == 1) {
             if (dma->channel[ch].qwc == 0u)
                 fabric->completion_pending |= (uint16_t)(1u<<ch);
@@ -67,7 +67,8 @@ int ps2_dma_fabric_step_bus(ps2_dma_fabric_t *fabric, ps2_dma_controller_t *dma,
             }
             result=ps2_dma_chain_step(&fabric->chain[ch],bus,slot->transfer,
                                       slot->opaque,ch,
-                                      (dma->channel[ch].chcr&PS2_DMA_CHCR_DIR)!=0u);
+                                      (dma->channel[ch].chcr&PS2_DMA_CHCR_DIR)!=0u,
+                                      (dma->channel[ch].chcr&PS2_DMA_CHCR_TIE)!=0u);
             if(result==2) {
                 dma->channel[ch].chcr&=~PS2_DMA_CHCR_STR;
                 fabric->chain_initialized&=(uint16_t)~bit;

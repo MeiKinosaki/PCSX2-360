@@ -25,6 +25,8 @@ int ps2_dma_write_dicr(ps2_dma_controller_t *dma,unsigned bank,uint32_t value)
     old &= ~(value & flag_mask);
     old = (old & flag_mask) | (value & (DICR_MASTER_ENABLE | (bank==0u?UINT32_C(0x00007f00):UINT32_C(0x00000700))));
     dma->dicr[bank]=old;
+    if(ps2_dma_irq_pending(dma,bank)) dma->dicr[bank]|=DICR_MASTER_FLAG;
+    else dma->dicr[bank]&=~DICR_MASTER_FLAG;
     return 0;
 }
 int ps2_dma_irq_pending(const ps2_dma_controller_t *dma,unsigned bank)
@@ -45,6 +47,6 @@ int ps2_dma_complete_channel(ps2_dma_controller_t *dma,unsigned channel,
     if(ps2_dma_irq_pending(dma,bank)) {
         if(ee!=0) ee->cause |= UINT32_C(1)<<10; /* EE external interrupt line IP2. */
         dma->dicr[bank]|=DICR_MASTER_FLAG;
-    }
+    } else dma->dicr[bank]&=~DICR_MASTER_FLAG;
     return 0;
 }

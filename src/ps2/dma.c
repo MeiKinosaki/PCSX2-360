@@ -1,6 +1,7 @@
 #include "dma.h"
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 void ps2_dma_reset(ps2_dma_controller_t *dma)
 {
     if (dma == NULL) return;
@@ -53,6 +54,32 @@ int ps2_dma_step(ps2_dma_controller_t *dma, unsigned channel,
         ch->madr > UINT32_MAX - PS2_DMA_QWORD_BYTES) return -3;
     direction = (ch->chcr & PS2_DMA_CHCR_DIR) != 0u;
     if (transfer(opaque, channel, ch->madr, direction) != 0) return -4;
+    ch->madr += PS2_DMA_QWORD_BYTES;
+    --ch->qwc;
+    if (ch->qwc == 0u) ch->chcr &= ~PS2_DMA_CHCR_STR;
+    return 1;
+}
+int ps2_dma_step_memory(ps2_dma_controller_t *dma, unsigned channel,
+                        uint8_t *ee_ram, size_t ee_ram_size,
+                        ps2_dma_device_qword_fn device, void *opaque)
+{
+    ps2_dma_channel_t *ch;
+    uint8_t qword[PS2_DMA_QWORD_BYTES];
+    int direction;
+    if (dma == NULL || ee_ram == NULL || device == NULL ||
+        channel >= PS2_DMA_CHANNEL_COUNT) return -1;
+    ch = &dma->channel[channel];
+    if ((ch->chcr & PS2_DMA_CHCR_STR) == 0u) return 0;
+    if ((ch->chcr & PS2_DMA_CHCR_MOD_MASK) != 0u) return -2;
+    if (ch->qwc == 0u) { ch->chcr &= ~PS2_DMA_CHCR_STR; return 0; }
+    if ((ch->madr & (PS2_DMA_QWORD_BYTES - 1u)) != 0u) return -3;
+    if ((size_t)ch->madr > ee_ram_size ||
+        ee_ram_size - (size_t)ch->madr < PS2_DMA_QWORD_BYTES) return -5;
+    direction = (ch->chcr & PS2_DMA_CHCR_DIR) != 0u;
+    if (direction) memcpy(qword, ee_ram + ch->madr, sizeof qword);
+    else memset(qword, 0, sizeof qword);
+    if (device(opaque, channel, qword, direction) != 0) return -4;
+    if (!direction) memcpy(ee_ram + ch->madr, qword, sizeof qword);
     ch->madr += PS2_DMA_QWORD_BYTES;
     --ch->qwc;
     if (ch->qwc == 0u) ch->chcr &= ~PS2_DMA_CHCR_STR;

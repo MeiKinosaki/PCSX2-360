@@ -57,6 +57,7 @@ void ps2_ee_raise_exception_ex(ps2_ee_state_t *state, uint32_t fault_pc,
 void ps2_ee_reset(ps2_ee_state_t *state);
 /* Versioned in-memory snapshot for the experimental EE core (same-build ABI). */
 #define PS2_EE_SNAPSHOT_VERSION 2u
+#define PS2_EE_MACHINE_SNAPSHOT_VERSION 2u
 #define PS2_EE_SNAPSHOT_PAYLOAD_SIZE (PS2_EE_GPR_COUNT * 8u + 2u * 8u + 3u * 4u + 1u + 12u * 4u + 8u)
 #define PS2_EE_SNAPSHOT_MAX_SIZE (16u + PS2_EE_SNAPSHOT_PAYLOAD_SIZE)
 int ps2_ee_state_save(const ps2_ee_state_t *state, uint8_t *out, size_t capacity, size_t *written);

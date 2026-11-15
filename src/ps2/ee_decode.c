@@ -351,7 +351,9 @@ ps2_ee_step_result_t ps2_ee_execute_memory_word_arch_tlb(
         exception_code = status == PS2_EE_TLB_ERR_MODIFIED
                        ? PS2_EE_EXC_MOD
                        : (store ? PS2_EE_EXC_TLBS : PS2_EE_EXC_TLBL);
-        ps2_ee_raise_exception(s, s->pc - UINT32_C(4), exception_code, s->in_delay_slot);
+        ps2_ee_raise_exception_ex(s, s->pc - UINT32_C(4), exception_code,
+                                  s->in_delay_slot,
+                                  status == PS2_EE_TLB_ERR_MISS);
         return PS2_EE_STEP_EXCEPTION;
     }
     if (store) {

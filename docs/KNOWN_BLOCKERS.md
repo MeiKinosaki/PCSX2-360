@@ -10,6 +10,7 @@ Este documento separa o que já existe no repositório do que ainda impede uma b
 ## Núcleo PS2
 - O núcleo EE continua parcial; não representa uma CPU R5900 completa.
 - A auditoria diferencial de exceções, PageMask, PFN, delay slots e semântica específica do R5900 continua aberta.
+- Existe um scaffold inicial dos 10 canais DMA EE (CHCR/MADR/QWC/TADR) e teste de registradores; ainda não há motor de transferência, chain mode, arbitragem, integração com dispositivos, scheduler ou interrupções DMA.
 - IOP, DMA, VU0/VU1, VIF, GIF, GS, SPU2 e CDVD ainda não formam uma máquina PS2 executável.
 - O snapshot EE + TLB + RAM agora usa serialização campo a campo little-endian, versão 2 e checksum; o carregamento valida o TLB antes de alterar CPU/RAM. A implementação e os testes ainda aguardam execução confirmada no CI. O formato exige RAM de mesmo tamanho e ainda não inclui IOP/DMA/VU/GS nem persistência integrada ao runtime.
 

@@ -69,7 +69,7 @@ static int load_tag(ps2_dma_chain_state_t *s, ps2_ee_bus_t *bus)
 }
 int ps2_dma_chain_step(ps2_dma_chain_state_t *s, ps2_ee_bus_t *bus,
                        ps2_dma_device_qword_fn device, void *opaque,
-                       unsigned channel, int direction)
+                       unsigned channel, int direction, int tag_irq_enable)
 {
     uint8_t qword[16]; unsigned guard=0u; int rc;
     if(s==0 || bus==0 || device==0) return -1;
@@ -79,7 +79,7 @@ int ps2_dma_chain_step(ps2_dma_chain_state_t *s, ps2_ee_bus_t *bus,
         if(s->tag_loaded) {
             uint8_t id=s->last_tag_id;
             s->tag_loaded=0u;
-            if(id==PS2_DMA_TAG_REFE || id==PS2_DMA_TAG_END) {
+            if((tag_irq_enable && s->last_tag_irq) || id==PS2_DMA_TAG_REFE || id==PS2_DMA_TAG_END) {
                 s->finished=1u; s->active=0u; return 2;
             }
             s->tag_address=s->next_tag_address;

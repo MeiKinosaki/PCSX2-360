@@ -28,7 +28,7 @@ O executável final obrigatório é **`build/default.xex`**. O arquivo ELF, quan
 - [x] Operações COP0/TLB experimentais ligadas ao despachante arquitetural: TLBP, TLBR, TLBWI e TLBWR.
 - [x] PageMask variável com sete codificações de tamanho de página aceitas pela implementação experimental e máscaras inválidas rejeitadas.
 - [x] Estado CP0.Context (registrador 4), leitura/escrita parcial e atualização dos campos BadVPN2/VPN2 em falhas TLB; testes adicionados, aguardando validação no CI.
-- [x] Exceções TLB distinguem miss real (refill vector) de entrada programada inválida (general vector); teste unitário adicionado, CI pendente.
+- [x] Exceções TLB distinguem miss real (refill vector) de entrada programada inválida (general vector); regressões de acesso de dados e de instruction fetch inválido verificam os vetores 0x80000000/0x80000180, CI pendente.
 - [x] Rastreamento experimental de delay slots no step EE: branch PC, destino após slot, EPC e Cause.BD em falhas de fetch/dados; teste de falha de load no slot e alvo do branch adicionados. CI pendente.
 - [x] Regressão do caminho feliz de branch tomado: uma instrução no delay slot, chegada ao alvo e execução da instrução-alvo; `make check` aprovado no CI do commit `a70db3a`.
 - [x] Testes host para TLB pareada, ASID, permissões, busca sem correspondência, round-trip CP0/TLB, TLBWR e PageMask.

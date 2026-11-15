@@ -73,7 +73,8 @@ int ps2_dma_step_memory(ps2_dma_controller_t *dma, unsigned channel,
     if ((ch->chcr & PS2_DMA_CHCR_MOD_MASK) != 0u) return -2;
     if (ch->qwc == 0u) { ch->chcr &= ~PS2_DMA_CHCR_STR; return 0; }
     if ((ch->madr & (PS2_DMA_QWORD_BYTES - 1u)) != 0u) return -3;
-    if ((size_t)ch->madr > ee_ram_size ||
+    if (ch->madr > UINT32_MAX - PS2_DMA_QWORD_BYTES ||
+        (size_t)ch->madr > ee_ram_size ||
         ee_ram_size - (size_t)ch->madr < PS2_DMA_QWORD_BYTES) return -5;
     direction = (ch->chcr & PS2_DMA_CHCR_DIR) != 0u;
     if (direction) memcpy(qword, ee_ram + ch->madr, sizeof qword);

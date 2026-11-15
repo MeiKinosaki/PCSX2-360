@@ -658,6 +658,58 @@ int main(void)
       assert(ps2_ee_cp0_read(&s, 4u, 0u, &value) == 0);
       assert(ps2_ee_cp0_read(&s, 14u, 1u, &value) == -1);
     }
+    /* Experimental EE interrupt mask, EXL gating and delay-slot deferral. */
+    {
+      uint8_t irq_ram[UINT32_C(0x4000)] = {0};
+      ps2_ee_memory_t irq_mem = {irq_ram, sizeof(irq_ram)};
+      ps2_ee_tlb_arch_t irq_tlb;
+      ps2_ee_state_t irq_cpu;
+      uint32_t addiu = (UINT32_C(0x09) << 26) | (3u << 16) | 5u;
+      ps2_ee_tlb_arch_reset(&irq_tlb);
+      assert(ps2_ee_tlb_arch_write_indexed(&irq_tlb, 0u, 3u,
+          (UINT32_C(1) << 6) | 7u, (UINT32_C(2) << 6) | 7u) == PS2_EE_TLB_OK);
+      assert(ps2_ee_mem_store(&irq_mem, UINT32_C(0x1020), 4u, addiu) == 0);
+
+      ps2_ee_reset(&irq_cpu);
+      irq_cpu.cp0_entry_hi = 3u;
+      irq_cpu.status = UINT32_C(0x00000401); /* IE + IM10 */
+      irq_cpu.cause = UINT32_C(0x00000400);  /* IP10 pending */
+      irq_cpu.pc = UINT32_C(0x20);
+      irq_cpu.next_pc = UINT32_C(0x24);
+      assert(ps2_ee_interrupt_pending(&irq_cpu) == 1);
+      assert(ps2_ee_step_arch_tlb(&irq_cpu, &irq_mem, &irq_tlb) == PS2_EE_STEP_EXCEPTION);
+      assert(((irq_cpu.cause >> 2) & 31u) == PS2_EE_EXC_INT);
+      assert(irq_cpu.epc == UINT32_C(0x20));
+      assert(irq_cpu.pc == UINT32_C(0x80000180));
+
+      /* EXL suppresses another interrupt even when IE/IM/IP are asserted. */
+      ps2_ee_reset(&irq_cpu);
+      irq_cpu.cp0_entry_hi = 3u;
+      irq_cpu.status = UINT32_C(0x00000403);
+      irq_cpu.cause = UINT32_C(0x00000400);
+      irq_cpu.pc = UINT32_C(0x20);
+      irq_cpu.next_pc = UINT32_C(0x24);
+      assert(ps2_ee_interrupt_pending(&irq_cpu) == 0);
+      assert(ps2_ee_step_arch_tlb(&irq_cpu, &irq_mem, &irq_tlb) == PS2_EE_STEP_OK);
+      assert(irq_cpu.gpr[3] == 5u);
+
+      /* A pending asynchronous interrupt is deferred until the delay slot ends. */
+      ps2_ee_reset(&irq_cpu);
+      irq_cpu.cp0_entry_hi = 3u;
+      irq_cpu.status = UINT32_C(0x00000401);
+      irq_cpu.cause = UINT32_C(0x00000400);
+      irq_cpu.pc = UINT32_C(0x20);
+      irq_cpu.next_pc = UINT32_C(0x24);
+      irq_cpu.in_delay_slot = 1u;
+      irq_cpu.branch_pc = UINT32_C(0x1c);
+      assert(ps2_ee_step_arch_tlb(&irq_cpu, &irq_mem, &irq_tlb) == PS2_EE_STEP_OK);
+      assert(irq_cpu.gpr[3] == 5u);
+      assert(irq_cpu.pc == UINT32_C(0x24));
+      assert(irq_cpu.in_delay_slot == 0u);
+      assert(ps2_ee_step_arch_tlb(&irq_cpu, &irq_mem, &irq_tlb) == PS2_EE_STEP_EXCEPTION);
+      assert(((irq_cpu.cause >> 2) & 31u) == PS2_EE_EXC_INT);
+      assert(irq_cpu.epc == UINT32_C(0x24));
+    }
     /* CP0 TLB management integration: TLBWI/TLBR/TLBP/TLBWR use shared TLB. */
     {
       ps2_ee_state_t cp0;

@@ -1083,7 +1083,7 @@ int main(void)
     {
       ps2_ee_state_t saved, loaded;
       ps2_ee_tlb_arch_t saved_tlb, loaded_tlb;
-      uint8_t machine_blob[16u + PS2_EE_SNAPSHOT_PAYLOAD_SIZE + 1u + 48u * 39u + 4u + sizeof(ram)];
+      uint8_t machine_blob[16u + PS2_EE_SNAPSHOT_PAYLOAD_SIZE + 1u + 48u * 25u + 4u + sizeof(ram)];
       size_t blob_size = 0u;
       uint32_t eh = UINT32_C(0x0012302a);
       ps2_ee_reset(&saved);
@@ -1100,7 +1100,7 @@ int main(void)
       {
         uint8_t invalid_blob[sizeof(machine_blob)];
         size_t page_mask_offset = 16u + PS2_EE_SNAPSHOT_PAYLOAD_SIZE +
-                                  1u + 4u * 39u + 4u;
+                                  1u + 3u * 25u + 4u;
         memcpy(invalid_blob, machine_blob, blob_size);
         invalid_blob[page_mask_offset] = 1u;
         test_put_u32_le(invalid_blob + 12u,

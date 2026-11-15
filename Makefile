@@ -14,6 +14,7 @@ DMA_TEST := $(BUILD_DIR)/test_dma
 EE_BUS_TEST := $(BUILD_DIR)/test_ee_bus
 DMA_ENDPOINT_TEST := $(BUILD_DIR)/test_dma_endpoints
 DMA_CHAIN_TEST := $(BUILD_DIR)/test_dma_chain
+DMA_BUS_TEST := $(BUILD_DIR)/test_dma_bus
 
 .PHONY: all check validate test-host toolchain-check xex clean
 all: check
@@ -26,6 +27,9 @@ $(HOST_TEST): $(EE_SOURCES) tests/test_ee_state.c | $(BUILD_DIR)
 
 $(DMA_TEST): src/ps2/dma.c src/ps2/dma.h tests/test_dma.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -Isrc/ps2 src/ps2/dma.c tests/test_dma.c -o $@
+
+$(DMA_BUS_TEST): src/ps2/dma.c src/ps2/dma_endpoints.c src/ps2/ee_bus.c src/ps2/dma.h src/ps2/dma_endpoints.h src/ps2/ee_bus.h tests/test_dma_bus.c | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -Isrc/ps2 src/ps2/dma.c src/ps2/dma_endpoints.c src/ps2/ee_bus.c tests/test_dma_bus.c -o $@
 
 $(DMA_CHAIN_TEST): src/ps2/dma_chain.c src/ps2/dma_chain.h tests/test_dma_chain.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -Isrc/ps2 src/ps2/dma_chain.c tests/test_dma_chain.c -o $@
@@ -48,6 +52,7 @@ validate:
 	@test -s src/ps2/dma_chain.c
 	@test -s src/ps2/dma_chain.h
 	@test -s tests/test_dma_chain.c
+	@test -s tests/test_dma_bus.c
 	@test -s src/ps2/dma_endpoints.c
 	@test -s src/ps2/dma_endpoints.h
 	@test -s tests/test_dma_endpoints.c
@@ -60,13 +65,14 @@ validate:
 	@for f in $(EE_SOURCES); do test -s $$f || exit 2; done
 	@echo "OK: fontes-base do EE e biblioteca encontradas."
 
-test-host: $(HOST_TEST) $(LIBRARY_TEST) $(DMA_TEST) $(EE_BUS_TEST) $(DMA_ENDPOINT_TEST) $(DMA_CHAIN_TEST)
+test-host: $(HOST_TEST) $(LIBRARY_TEST) $(DMA_TEST) $(EE_BUS_TEST) $(DMA_ENDPOINT_TEST) $(DMA_CHAIN_TEST) $(DMA_BUS_TEST)
 	./$(HOST_TEST)
 	./$(LIBRARY_TEST)
 	./$(DMA_TEST)
 	./$(EE_BUS_TEST)
 	./$(DMA_ENDPOINT_TEST)
 	./$(DMA_CHAIN_TEST)
+	./$(DMA_BUS_TEST)
 
 check: validate test-host
 

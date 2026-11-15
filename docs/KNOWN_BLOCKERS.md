@@ -9,6 +9,7 @@ Este documento separa o que já existe no repositório do que ainda impede uma b
 
 ## Núcleo PS2
 - O núcleo EE continua parcial; não representa uma CPU R5900 completa.
+- Existe uma arbitragem experimental de interrupções usando Status.IE/IM, Cause.IP e EXL/ERL, com amostragem no limite entre instruções e deferimento em delay slot; ainda não há fontes de IRQ dos dispositivos, temporização completa, máscaras específicas EE nem auditoria diferencial R5900.
 - A auditoria diferencial de exceções, PageMask, PFN, delay slots e semântica específica do R5900 continua aberta.
 - Existe um scaffold inicial dos 10 canais DMA EE (CHCR/MADR/QWC/TADR) e teste de registradores; ainda não há motor de transferência, chain mode, arbitragem, integração com dispositivos, scheduler ou interrupções DMA.
 - IOP, DMA, VU0/VU1, VIF, GIF, GS, SPU2 e CDVD ainda não formam uma máquina PS2 executável.

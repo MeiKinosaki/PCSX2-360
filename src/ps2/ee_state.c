@@ -63,6 +63,18 @@ void ps2_ee_raise_exception(ps2_ee_state_t *state, uint32_t fault_pc,
         exc_code == PS2_EE_EXC_TLBL || exc_code == PS2_EE_EXC_TLBS);
 }
 
+int ps2_ee_interrupt_pending(const ps2_ee_state_t *state)
+{
+    uint32_t enabled_pending;
+    if (state == NULL) return 0;
+    /* IE must be set; EXL or ERL suppress asynchronous interrupt entry. */
+    if ((state->status & UINT32_C(0x1)) == 0u ||
+        (state->status & UINT32_C(0x6)) != 0u)
+        return 0;
+    enabled_pending = state->status & state->cause & UINT32_C(0x0000ff00);
+    return enabled_pending != 0u;
+}
+
 int ps2_ee_cp0_read(const ps2_ee_state_t *state, unsigned reg, unsigned sel, uint32_t *value)
 {
     if (state == NULL || value == NULL || sel != 0u) return -1;
@@ -112,10 +124,9 @@ int ps2_ee_cp0_write(ps2_ee_state_t *state, unsigned reg, unsigned sel, uint32_t
         state->cp0_entry_hi = value & UINT32_C(0xffffe0ff);
         return 0;
     case 12u:
-        /* This prototype models IE, EXL, ERL and BEV only; other Status bits
-         * remain untouched until interrupt-mask and privilege logic exists. */
-        state->status = (state->status & ~UINT32_C(0x00400007)) |
-                        (value & UINT32_C(0x00400007));
+        /* Model IE, EXL, ERL, BEV and the eight interrupt mask bits. */
+        state->status = (state->status & ~UINT32_C(0x0040ff07)) |
+                        (value & UINT32_C(0x0040ff07));
         return 0;
     case 13u:
         /* Software interrupt pending bits are writable; ExcCode/BD are not. */

@@ -1040,6 +1040,13 @@ int main(void)
       assert(ps2_ee_state_save(&original, snapshot, sizeof(snapshot), &written) == 0);
       assert(written == PS2_EE_SNAPSHOT_MAX_SIZE);
       snapshot_size = written;
+      /* Wire-format checks: GPR7 and PC are encoded little-endian, independent
+         of host structure padding and native endianness. */
+      assert(snapshot[16u + 7u * 8u] == UINT8_C(0x88));
+      assert(snapshot[16u + 7u * 8u + 7u] == UINT8_C(0x11));
+      assert(snapshot[16u + 256u + 16u] == UINT8_C(0x50));
+      assert(snapshot[16u + 256u + 17u] == UINT8_C(0x34));
+      assert(snapshot[16u + 256u + 18u] == UINT8_C(0x12));
       /* A rejected save reports no bytes and leaves the output untouched. */
       {
         uint8_t guard[16];

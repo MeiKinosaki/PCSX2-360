@@ -29,8 +29,8 @@ $(BUILD_DIR):
 $(HOST_TEST): $(EE_SOURCES) tests/test_ee_state.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -Isrc/ps2 $(EE_SOURCES) tests/test_ee_state.c -o $@
 
-$(SCHEDULER_TEST): src/ps2/scheduler.c src/ps2/iop.c src/ps2/dma_irq.c src/ps2/dma.c src/ps2/dma_endpoints.c src/ps2/ee_bus.c src/ps2/ee_state.c src/ps2/scheduler.h tests/test_scheduler.c | $(BUILD_DIR)
-	$(CC) $(CFLAGS) -Isrc/ps2 src/ps2/scheduler.c src/ps2/iop.c src/ps2/dma_irq.c src/ps2/dma.c src/ps2/dma_endpoints.c src/ps2/ee_bus.c src/ps2/ee_state.c tests/test_scheduler.c -o $@
+$(SCHEDULER_TEST): src/ps2/scheduler.c src/ps2/iop.c src/ps2/dma_irq.c src/ps2/dma.c src/ps2/dma_chain.c src/ps2/dma_endpoints.c src/ps2/ee_bus.c src/ps2/ee_state.c src/ps2/scheduler.h tests/test_scheduler.c | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -Isrc/ps2 src/ps2/scheduler.c src/ps2/iop.c src/ps2/dma_irq.c src/ps2/dma.c src/ps2/dma_chain.c src/ps2/dma_endpoints.c src/ps2/ee_bus.c src/ps2/ee_state.c tests/test_scheduler.c -o $@
 
 $(IOP_TEST): src/ps2/iop.c src/ps2/iop.h tests/test_iop.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -Isrc/ps2 src/ps2/iop.c tests/test_iop.c -o $@

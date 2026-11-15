@@ -1053,6 +1053,61 @@ int main(void)
       assert(fault_ram[UINT32_C(0x20)] == UINT8_C(0xa5));
       assert(fault_ram[UINT32_C(0x21)] == UINT8_C(0x5a));
 
+      /* Exercise every currently decoded scalar EE load/store width. */
+      {
+        uint64_t raw = 0u;
+        uint32_t insn;
+        assert(ps2_ee_tlb_arch_write_indexed(&fault_tlb, 0u, 3u,
+            (UINT32_C(1) << 6) | 7u,
+            (UINT32_C(2) << 6) | 7u) == PS2_EE_TLB_OK);
+        ps2_ee_reset(&cpu);
+        cpu.cp0_entry_hi = 3u;
+        cpu.gpr[1] = UINT32_C(0x20);
+        cpu.gpr[2] = UINT64_C(0x8877665544332211);
+
+        /* SB, SH, SW and SD must write exactly their selected widths. */
+        insn = (UINT32_C(0x28) << 26) | (1u << 21) | (2u << 16) | 0x10u;
+        assert(ps2_ee_execute_memory_word_arch_tlb(&cpu, &fault_mem, &fault_tlb, insn) == PS2_EE_STEP_OK);
+        assert(ps2_ee_mem_load(&fault_mem, UINT32_C(0x1030), 1u, &raw) == 0 && raw == UINT64_C(0x11));
+        insn = (UINT32_C(0x29) << 26) | (1u << 21) | (2u << 16) | 0x12u;
+        assert(ps2_ee_execute_memory_word_arch_tlb(&cpu, &fault_mem, &fault_tlb, insn) == PS2_EE_STEP_OK);
+        assert(ps2_ee_mem_load(&fault_mem, UINT32_C(0x1032), 2u, &raw) == 0 && raw == UINT64_C(0x2211));
+        insn = (UINT32_C(0x2b) << 26) | (1u << 21) | (2u << 16) | 0x14u;
+        assert(ps2_ee_execute_memory_word_arch_tlb(&cpu, &fault_mem, &fault_tlb, insn) == PS2_EE_STEP_OK);
+        assert(ps2_ee_mem_load(&fault_mem, UINT32_C(0x1034), 4u, &raw) == 0 && raw == UINT64_C(0x44332211));
+        insn = (UINT32_C(0x3f) << 26) | (1u << 21) | (2u << 16) | 0x18u;
+        assert(ps2_ee_execute_memory_word_arch_tlb(&cpu, &fault_mem, &fault_tlb, insn) == PS2_EE_STEP_OK);
+        assert(ps2_ee_mem_load(&fault_mem, UINT32_C(0x1038), 8u, &raw) == 0 && raw == UINT64_C(0x8877665544332211));
+
+        /* Seed signed edge cases, then verify sign/zero extension for LB/LBU,
+           LH/LHU, LW/LWU and the full-width LD operation. */
+        assert(ps2_ee_mem_store(&fault_mem, UINT32_C(0x1020), 1u, UINT64_C(0x80)) == 0);
+        assert(ps2_ee_mem_store(&fault_mem, UINT32_C(0x1022), 2u, UINT64_C(0x8001)) == 0);
+        assert(ps2_ee_mem_store(&fault_mem, UINT32_C(0x1024), 4u, UINT64_C(0x80000001)) == 0);
+        assert(ps2_ee_mem_store(&fault_mem, UINT32_C(0x1028), 8u, UINT64_C(0x8877665544332211)) == 0);
+        insn = (UINT32_C(0x20) << 26) | (1u << 21) | (3u << 16);
+        assert(ps2_ee_execute_memory_word_arch_tlb(&cpu, &fault_mem, &fault_tlb, insn) == PS2_EE_STEP_OK);
+        assert(cpu.gpr[3] == UINT64_C(0xffffffffffffff80));
+        insn = (UINT32_C(0x24) << 26) | (1u << 21) | (3u << 16);
+        assert(ps2_ee_execute_memory_word_arch_tlb(&cpu, &fault_mem, &fault_tlb, insn) == PS2_EE_STEP_OK);
+        assert(cpu.gpr[3] == UINT64_C(0x80));
+        insn = (UINT32_C(0x21) << 26) | (1u << 21) | (3u << 16) | 2u;
+        assert(ps2_ee_execute_memory_word_arch_tlb(&cpu, &fault_mem, &fault_tlb, insn) == PS2_EE_STEP_OK);
+        assert(cpu.gpr[3] == UINT64_C(0xffffffffffff8001));
+        insn = (UINT32_C(0x25) << 26) | (1u << 21) | (3u << 16) | 2u;
+        assert(ps2_ee_execute_memory_word_arch_tlb(&cpu, &fault_mem, &fault_tlb, insn) == PS2_EE_STEP_OK);
+        assert(cpu.gpr[3] == UINT64_C(0x8001));
+        insn = (UINT32_C(0x23) << 26) | (1u << 21) | (3u << 16) | 4u;
+        assert(ps2_ee_execute_memory_word_arch_tlb(&cpu, &fault_mem, &fault_tlb, insn) == PS2_EE_STEP_OK);
+        assert(cpu.gpr[3] == UINT64_C(0xffffffff80000001));
+        insn = (UINT32_C(0x27) << 26) | (1u << 21) | (3u << 16) | 4u;
+        assert(ps2_ee_execute_memory_word_arch_tlb(&cpu, &fault_mem, &fault_tlb, insn) == PS2_EE_STEP_OK);
+        assert(cpu.gpr[3] == UINT64_C(0x80000001));
+        insn = (UINT32_C(0x37) << 26) | (1u << 21) | (3u << 16) | 8u;
+        assert(ps2_ee_execute_memory_word_arch_tlb(&cpu, &fault_mem, &fault_tlb, insn) == PS2_EE_STEP_OK);
+        assert(cpu.gpr[3] == UINT64_C(0x8877665544332211));
+      }
+
       /* An invalid even half causes TLBL on reads and TLBS on writes. */
       assert(ps2_ee_tlb_arch_write_indexed(&fault_tlb, 0u, 3u,
           (UINT32_C(1) << 6) | 4u, lo_odd_dirty) == PS2_EE_TLB_OK);

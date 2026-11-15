@@ -6,7 +6,7 @@
 int main(void)
 {
     uint8_t raw[16]={0}; ps2_dma_tag_t tag;
-    uint64_t low=UINT64_C(0x12345678);
+    uint64_t low=0;
     low|=UINT64_C(0x2a)<<0; low|=UINT64_C(2)<<26;
     low|=UINT64_C(5)<<28; low|=UINT64_C(1)<<31;
     low|=UINT64_C(0x0012345)<<32; low|=UINT64_C(1)<<63;

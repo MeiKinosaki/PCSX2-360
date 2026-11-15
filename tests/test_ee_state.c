@@ -974,6 +974,8 @@ int main(void)
           &fault_tlb, lw) == PS2_EE_STEP_EXCEPTION);
       assert(cpu.badvaddr == UINT32_C(0x20));
       assert(((cpu.cause >> 2) & 31u) == PS2_EE_EXC_TLBL);
+      /* A programmed-invalid page is not a refill miss: use general vector. */
+      assert(cpu.pc == UINT32_C(0x80000180));
 
       ps2_ee_reset(&cpu);
       cpu.cp0_entry_hi = 3u;

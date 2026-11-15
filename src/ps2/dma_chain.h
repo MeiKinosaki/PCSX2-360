@@ -26,5 +26,5 @@ int ps2_dma_tag_decode(const uint8_t bytes[16], ps2_dma_tag_t *tag);
 void ps2_dma_chain_reset(ps2_dma_chain_state_t *state, uint32_t tadr);
 int ps2_dma_chain_step(ps2_dma_chain_state_t *state, ps2_ee_bus_t *bus,
                        ps2_dma_device_qword_fn device, void *opaque,
-                       unsigned channel, int direction);
+                       unsigned channel, int direction, int tag_irq_enable);
 #endif

@@ -24,8 +24,10 @@ Este documento separa o que já existe no repositório do que ainda impede uma b
 
 ## Xbox 360 / XEX
 - `src/main.c` ainda é um bootstrap de demonstração e não inicializa vídeo, áudio, controles, armazenamento ou rede.
-- O alvo `make xex` requer `xenon-gcc`, bibliotecas libXenon e `elf2xex`.
-- O workflow de XEX exige um runner self-hosted com labels `linux,xenon`; não há evidência de runner configurado nem de artefato `build/default.xex`.
+- O alvo `make xex` requer `xenon-gcc`, `libxenon.a`, `app.lds` e `xenon-elf2xex`.
+- O workflow de XEX dispara automaticamente em pushes para `main`, mas depende de runner self-hosted com labels `linux,xenon,xex-packer`.
+- A imagem pública `free60/libxenon` documenta a toolchain e bibliotecas, mas não inclui um conversor ELF→XEX. O conversor precisa ser provisionado e validado separadamente; não foi substituído por um empacotador de outro ABI/linker.
+- Não há evidência de runner com esses labels, de conversor compatível instalado, de execução do job ou de artefato `build/default.xex`.
 - Um ELF intermediário não é o produto final; o requisito de entrega é `build/default.xex` validado.
 
 ## Ordem de resolução
@@ -34,6 +36,6 @@ Este documento separa o que já existe no repositório do que ainda impede uma b
 3. Completar o caminho de execução do EE e depois implementar IOP/DMA/VU/GIF/GS/SPU2/CDVD.
 4. Implementar scanner e persistência da biblioteca.
 5. Criar runtime Xbox 360 (vídeo, áudio, input, armazenamento e rede).
-6. Provisionar runner Xenon, gerar `build/default.xex`, inspecionar o artefato e testar em console RGH/JTAG.
+6. Provisionar runner Xenon com empacotador ELF→XEX compatível, executar o job automático, gerar `build/default.xex`, inspecionar o artefato e testar em console RGH/JTAG.
 
 Nenhum item dependente de CI, toolchain, runner ou console é considerado concluído sem evidência correspondente.

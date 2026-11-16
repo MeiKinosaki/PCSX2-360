@@ -55,3 +55,10 @@ The Xenon XEX job remains manual and requires a provisioned self-hosted runner l
 - Lower numeric priority values are selected first; equal-priority channels are resolved in favor of the higher channel number.
 - The DMA bus regression now covers distinct priorities and equal-priority tie-breaking.
 - This is source-level behavior and a regression specification; it is not yet CI-validated or hardware-verified.
+
+
+## Scheduler fault and DPCR gating regression
+
+- Scheduler regression now checks that a DMA channel disabled in DPCR remains started but performs no transfer and raises no completion interrupt.
+- A physical EE bus access fault is injected through an out-of-range MADR; the expected contract is an error return, CHCR.STR cleared by the fabric, no completion-pending event, and no EE IP2 completion interrupt.
+- These are regression expectations added to source; execution and CI approval are still pending.

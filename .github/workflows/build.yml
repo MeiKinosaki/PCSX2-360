@@ -1,4 +1,4 @@
-name: PCSX2-360 validation and automatic XEX build
+name: PCSX2-360 validation and automatic retail-kernel XEX build
 
 on:
   push:
@@ -20,31 +20,47 @@ jobs:
         run: make check
 
   xenon-default-xex:
-    # This runner must have libXenon AND a verified Xenon ELF-to-XEX packer.
-    # It starts automatically on pushes once the runner is registered with these labels.
     if: github.event_name != 'pull_request'
-    runs-on: [self-hosted, linux, xenon, xex-packer]
-    timeout-minutes: 45
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
-      - name: Verify Xenon toolchain and XEX packer
+      - name: Checkout pinned XSDK retail-kernel toolchain and XEX packer
+        uses: actions/checkout@v4
+        with:
+          repository: xenosworks/xsdk
+          ref: ade2c81d914634834d77394c5d9f8c4575f395bc
+          path: xsdk
+      - name: Install cross-toolchain build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential bison flex texinfo libgmp-dev libmpfr-dev libmpc-dev curl xz-utils patch python3 cmake ninja-build git
+      - name: Restore cross-toolchain cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/xsdk-gcc
+            ~/xsdk-gcc-work
+          key: xsdk-toolchain-ubuntu-${{ hashFiles('xsdk/tools/toolchain/build.sh', 'xsdk/tools/toolchain/*.patch') }}
+      - name: Build pinned PowerPC XSDK toolchain
         run: |
           set -euo pipefail
-          command -v xenon-gcc
-          command -v xenon-elf2xex
-          test -n "${DEVKITXENON:-}"
-          test -s "$DEVKITXENON/app.lds"
-          test -s "$DEVKITXENON/usr/lib/libxenon.a"
-      - name: Run regressions and generate final XEX
+          PREFIX="$HOME/xsdk-gcc" WORK="$HOME/xsdk-gcc-work" JOBS=2 xsdk/tools/toolchain/build.sh
+          "$HOME/xsdk-gcc/bin/powerpc-xsdk-elf-gcc" --version
+      - name: Build XSDK retail-kernel runtime
         run: |
           set -euo pipefail
-          make clean
-          make check
-          make xex
+          make -C xsdk -j2 TOOLCHAIN="$HOME/xsdk-gcc/bin/powerpc-xsdk-elf-" build/libxsdk.a
+          test -s xsdk/build/libxsdk.a
+      - name: Build and package default.xex
+        run: |
+          set -euo pipefail
+          make xex XSDK_DIR="$GITHUB_WORKSPACE/xsdk" XSDK_TOOLCHAIN="$HOME/xsdk-gcc"
           test -s build/default.xex
-          ! test -e build/pcsx2-360.elf.tmp
-          ! test -e build/default.xex.tmp
+          test "$(head -c 4 build/default.xex)" = "XEX2"
+          test ! -e build/xex/default
           sha256sum build/default.xex > build/default.xex.sha256
+          file build/default.xex
       - uses: actions/upload-artifact@v4
         with:
           name: PCSX2-360-default-xex-${{ github.run_number }}

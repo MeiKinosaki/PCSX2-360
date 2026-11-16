@@ -24,10 +24,6 @@ void ps2_dma_chain_reset(ps2_dma_chain_state_t *state, uint32_t tadr)
     if(state==0) return;
     memset(state,0,sizeof(*state)); state->tag_address=tadr; state->active=1u;
 }
-static uint32_t tag_data_address(uint32_t tag_address)
-{
-    return tag_address + 16u;
-}
 static int load_tag(ps2_dma_chain_state_t *s, ps2_ee_bus_t *bus)
 {
     uint8_t raw[16]; ps2_dma_tag_t tag; uint32_t after;

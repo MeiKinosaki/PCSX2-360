@@ -26,6 +26,8 @@ int ps2_scheduler_run(ps2_scheduler_t *s,ps2_ee_state_t *ee,
         if(rc<0)return rc;
         if(rc==1 && ps2_dma_fabric_take_completion(fabric,channel)==1)
             (void)ps2_dma_complete_channel(dma,channel,ee);
+        /* Keep EE IP2 asserted while either DICR bank still requests service. */
+        ps2_dma_sync_irq(dma,ee);
     }
     return 0;
 }

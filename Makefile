@@ -1,11 +1,10 @@
 CC ?= cc
 CFLAGS ?= -std=c11 -Wall -Wextra -Werror -pedantic -O2
 BUILD_DIR := build
-XENON_CC ?= xenon-gcc
-DEVKITXENON ?= /usr/local/xenon
-ELF2XEX ?= xenon-elf2xex
-XENON_CFLAGS ?= -mcpu=cell -mtune=cell -m32 -fno-pic -mpowerpc64 -O2 -Wall -Wextra -I$(DEVKITXENON)/usr/include
-XENON_LDFLAGS ?= $(DEVKITXENON)/usr/lib/libxenon.a -L$(DEVKITXENON)/xenon/lib/32 -T$(DEVKITXENON)/app.lds -u read -u _start -u exc_base -L$(DEVKITXENON)/usr/lib
+XSDK_DIR ?= ../xsdk
+XSDK_TOOLCHAIN ?= $(HOME)/xsdk-gcc
+XSDK_CC := $(XSDK_TOOLCHAIN)/bin/powerpc-xsdk-elf-gcc
+
 
 EE_SOURCES := src/ps2/dma.c src/ps2/dma_irq.c src/ps2/device_fifo.c src/ps2/iop.c src/ps2/scheduler.c src/ps2/dma_chain.c src/ps2/dma_endpoints.c src/ps2/ee_bus.c src/ps2/ee_state.c src/ps2/ee_ops.c src/ps2/ee_immediate.c \
               src/ps2/ee_compare.c src/ps2/ee_decode.c src/ps2/ee_memory.c \
@@ -110,31 +109,23 @@ test-host: $(HOST_TEST) $(LIBRARY_TEST) $(DMA_IRQ_TEST) $(DEVICE_FIFO_TEST) $(IO
 check: validate test-host
 
 toolchain-check:
-	@command -v $(XENON_CC) >/dev/null 2>&1 || { echo "ERRO: $(XENON_CC) ausente."; exit 2; }
-	@command -v $(ELF2XEX) >/dev/null 2>&1 || { echo "ERRO: $(ELF2XEX) ausente."; exit 2; }
-	@test -s "$(DEVKITXENON)/app.lds" || { echo "ERRO: app.lds ausente em $(DEVKITXENON)."; exit 2; }
-	@test -s "$(DEVKITXENON)/usr/lib/libxenon.a" || { echo "ERRO: libxenon.a ausente em $(DEVKITXENON)/usr/lib."; exit 2; }
-	@echo "OK: xenon-gcc, xenon-elf2xex e arquivos de link libXenon encontrados."
+	@test -x "$(XSDK_CC)" || { echo "ERRO: toolchain xsdk ausente em $(XSDK_TOOLCHAIN)."; exit 2; }
+	@test -s "$(XSDK_DIR)/cmake/xsdk.cmake" || { echo "ERRO: xsdk não encontrado em $(XSDK_DIR)."; exit 2; }
+	@test -s "$(XSDK_DIR)/tools/elf2xex.py" || { echo "ERRO: empacotador XEX do xsdk ausente."; exit 2; }
+	@test -s "$(XSDK_DIR)/src/xsdk.ld" || { echo "ERRO: linker script do xsdk ausente."; exit 2; }
+	@echo "OK: toolchain, runtime, linker e empacotador xsdk encontrados."
 
-# O ELF existe apenas durante a conversão; sucesso ou falha não o deixa como artefato.
-$(BUILD_DIR)/default.xex: src/main.c $(EE_SOURCES) | $(BUILD_DIR)
-	$(MAKE) toolchain-check
-	@set -eu; \
-	elf="$(BUILD_DIR)/pcsx2-360.elf.tmp"; \
-	xex_tmp="$@.tmp"; \
-	trap 'rm -f "$$elf" "$$xex_tmp"' EXIT HUP INT TERM; \
-	rm -f "$$elf" "$$xex_tmp" "$@"; \
-	$(XENON_CC) $(XENON_CFLAGS) -Isrc/ps2 src/main.c $(EE_SOURCES) $(XENON_LDFLAGS) -o "$elf"; \
-	test -s "$$elf"; \
-	$(ELF2XEX) "$$elf" "$$xex_tmp"; \
-	test -s "$$xex_tmp"; \
-	mv "$$xex_tmp" "$@"; \
-	rm -f "$$elf"; \
-	trap - EXIT HUP INT TERM; \
-	test -s "$@"; \
-	echo "OK: build/default.xex gerado; ELF intermediário removido."
-
-xex: $(BUILD_DIR)/default.xex
+# Gera um título XEX para o kernel retail usado em consoles RGH/JTAG.
+# O ELF é intermediário privado do build e é removido após o empacotamento.
+xex: check toolchain-check
+	$(MAKE) -C "$(XSDK_DIR)" TOOLCHAIN="$(XSDK_TOOLCHAIN)/bin/powerpc-xsdk-elf-" build/libxsdk.a
+	cmake -S xex -B $(BUILD_DIR)/xex -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_TOOLCHAIN_FILE="$(XSDK_DIR)/cmake/xsdk.cmake" -DXSDK_TOOLCHAIN="$(XSDK_TOOLCHAIN)"
+	cmake --build $(BUILD_DIR)/xex
+	mkdir -p $(BUILD_DIR)
+	cp $(BUILD_DIR)/xex/default.xex $(BUILD_DIR)/default.xex
+	rm -f $(BUILD_DIR)/xex/default
+	@test -s $(BUILD_DIR)/default.xex
+	@echo "OK: build/default.xex gerado pelo xsdk; ELF intermediário removido."
 
 clean:
 	rm -rf $(BUILD_DIR)

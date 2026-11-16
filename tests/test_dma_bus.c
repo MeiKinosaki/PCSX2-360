@@ -51,6 +51,30 @@ int main(void)
     assert(ps2_dma_fabric_step_bus(&fabric,&dma,&bus,&serviced)==1);
     assert((dma.channel[5].chcr&PS2_DMA_CHCR_STR)==0u);
     assert(ps2_dma_fabric_take_completion(&fabric,5u)==1);
-    puts("OK: DMA endpoint fabric physical bus and CHCR chain-mode integration.");
+    /* DPCR arbitration: priority 0 wins; equal priorities favor higher channel. */
+    assert(ps2_dma_fabric_bind(&fabric,PS2_DMA_ENDPOINT_IPU_TO,transfer,&dev)==0);
+    assert(ps2_dma_set_channel_priority(&dma,4u,1u,1)==0);
+    assert(ps2_dma_set_channel_priority(&dma,5u,2u,1)==0);
+    dma.channel[4].chcr=PS2_DMA_CHCR_STR|PS2_DMA_CHCR_DIR;
+    dma.channel[4].madr=0u; dma.channel[4].qwc=1u;
+    dma.channel[5].chcr=PS2_DMA_CHCR_STR|PS2_DMA_CHCR_DIR;
+    dma.channel[5].madr=16u; dma.channel[5].qwc=1u;
+    assert(ps2_dma_fabric_step_bus(&fabric,&dma,&bus,&serviced)==1);
+    assert(serviced==4u);
+    assert(ps2_dma_fabric_step_bus(&fabric,&dma,&bus,&serviced)==1);
+    assert(serviced==5u);
+
+    /* Same priority: the documented higher channel number wins arbitration. */
+    dma.channel[4].chcr=PS2_DMA_CHCR_STR|PS2_DMA_CHCR_DIR;
+    dma.channel[4].madr=0u; dma.channel[4].qwc=1u;
+    dma.channel[5].chcr=PS2_DMA_CHCR_STR|PS2_DMA_CHCR_DIR;
+    dma.channel[5].madr=16u; dma.channel[5].qwc=1u;
+    assert(ps2_dma_set_channel_priority(&dma,4u,3u,1)==0);
+    assert(ps2_dma_set_channel_priority(&dma,5u,3u,1)==0);
+    assert(ps2_dma_fabric_step_bus(&fabric,&dma,&bus,&serviced)==1);
+    assert(serviced==5u);
+    assert(ps2_dma_fabric_step_bus(&fabric,&dma,&bus,&serviced)==1);
+    assert(serviced==4u);
+    puts("OK: DMA bus, chain mode and DPCR priority arbitration tests.");
     return 0;
 }

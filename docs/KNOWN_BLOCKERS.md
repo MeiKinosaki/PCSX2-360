@@ -24,12 +24,11 @@ Este documento separa o que já existe no repositório do que ainda impede uma b
 
 ## Xbox 360 / XEX
 - `src/main.c` ainda é um bootstrap de demonstração e não inicializa vídeo, áudio, controles, armazenamento ou rede.
-- O alvo `make xex` está configurado para chamar `xenon-elf2xex`, mas esse executável não foi localizado na distribuição/documentação consultada do Free60 libXenon; portanto, o nome configurado ainda é uma dependência não comprovada.
-- O workflow dispara em pushes para `main`, mas a execução nº 314 (`43868926608`) permanece `queued`; ambos os jobs aguardam e não há artefatos. O job XEX pede runner self-hosted com labels `linux,xenon,xex-packer`.
-- A imagem pública `free60/libxenon` fornece toolchain e bibliotecas, mas não documenta um conversor ELF→XEX.
-- Foi auditado como candidato o `Team-Resurgent/RXDK360/tools/elf2xex.py` (commit `470c84322f5dda0f3b47ac7b047a0cfce1330d95`). O script lê ELF PPC big-endian ELF32/ELF64 e produz XEX2 no fluxo RXDK; a documentação demonstra testes no Xenia. Isso não prova compatibilidade com o ELF/linker/runtime bare-metal libXenon nem execução no console. Não integrar nem chamar esse packer como solução libXenon sem teste de compatibilidade e validação de boot.
-- A libXenon é uma biblioteca homebrew bare-metal; empacotar seu ELF em um contêiner XEX não converte automaticamente seu runtime/ABI para o modelo de título retail-kernel. Para um XEX de dashboard/retail kernel, o bootstrap/runtime precisa ser portado para um SDK/ABI de título XEX (por exemplo, um fluxo RXDK/XSDK), não apenas empacotado.
-- Não há evidência de runner com esses labels, conversor compatível instalado, execução do job ou artefato `build/default.xex`.
+- O fluxo foi migrado para o XSDK `xenosworks/xsdk` no commit `ade2c81d914634834d77394c5d9f8c4575f395bc`, que documenta toolchain PowerPC própria, runtime para retail kernel e packer ELF→XEX2.
+- O Makefile compila o título com o toolchain `powerpc-xsdk-elf`, liga `libxsdk.a` e usa o script `xsdk/tools/elf2xex.py`; o ELF é apagado depois de copiar `build/default.xex`.
+- Workflow automático usa `ubuntu-latest` e constrói toolchain e runtime na nuvem. Execução nº 319 (`43869392104`) foi criada, mas permanece `queued`; ainda não há resultado de compilação ou artefato.
+- O empacotador XSDK é documentado para títulos do retail kernel e consoles RGH/JTAG, mas o primeiro XEX do PCSX2-360 ainda precisa passar pelo CI e depois por teste de boot em hardware. Não confundir geração do contêiner XEX com funcionalidade do emulador PS2.
+- O `src/main.c` continua bootstrap mínimo; mesmo um `default.xex` gerado nesta fase não executará jogos PS2.
 - Um ELF intermediário não é o produto final; o requisito de entrega é `build/default.xex` validado.
 
 ## Ordem de resolução
@@ -38,6 +37,6 @@ Este documento separa o que já existe no repositório do que ainda impede uma b
 3. Completar o caminho de execução do EE e depois implementar IOP/DMA/VU/GIF/GS/SPU2/CDVD.
 4. Implementar scanner e persistência da biblioteca.
 5. Criar runtime Xbox 360 (vídeo, áudio, input, armazenamento e rede).
-6. Escolher e portar o bootstrap para um runtime/ABI de título XEX compatível (sem presumir que libXenon bare-metal seja intercambiável); depois provisionar runner/SDK/packer, gerar `build/default.xex`, inspecionar e validar em Xenia e console RGH/JTAG.
+6. Concluir a build XSDK no GitHub Actions, validar cabeçalho/artefato `build/default.xex`, fazer smoke test em Xenia e depois testar o boot em console RGH/JTAG.
 
 Nenhum item dependente de CI, toolchain, runner ou console é considerado concluído sem evidência correspondente.

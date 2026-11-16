@@ -95,26 +95,26 @@ int main(void)
     assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,0,1,0)==-6);
     ps2_dma_chain_reset(&s,0x10000);
     assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,0,1,0)==-2);
-    /* Tag IRQ only halts at the tag boundary when TIE is enabled. */
-    memset(ram,0,sizeof ram);
-    write_tag(ram+0x100,1,PS2_DMA_TAG_CNT,0);
-    ram[0x100+3]|=0x80u; /* IRQ bit 31 of tag low qword */
-    for(i=0;i<16u;i++)ram[0x110u+i]=(uint8_t)(0xa0u+i);
-    write_tag(ram+0x120,0,PS2_DMA_TAG_END,0);
-    ps2_dma_chain_reset(&s,0x100);
-    assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,6,1,1)==1);
-    assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,6,1,1)==2);
-    assert(s.finished);
-    /* The same tag IRQ is ignored when CHCR TIE is clear. */
+    /* TIE=1 must stop at the IRQ tag, before the following CNT payload. */
     memset(ram,0,sizeof ram);
     write_tag(ram+0x100,1,PS2_DMA_TAG_CNT,0);
     ram[0x103]|=0x80u;
-    for(i=0;i<16u;i++)ram[0x110u+i]=(uint8_t)(0xb0u+i);
-    write_tag(ram+0x120,0,PS2_DMA_TAG_END,0);
+    for(i=0;i<16u;i++)ram[0x110u+i]=(uint8_t)(0xa0u+i);
+    write_tag(ram+0x120,1,PS2_DMA_TAG_CNT,0);
+    for(i=0;i<16u;i++)ram[0x130u+i]=(uint8_t)(0xc0u+i);
+    write_tag(ram+0x140,0,PS2_DMA_TAG_END,0);
     ps2_dma_chain_reset(&s,0x100);
+    assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,6,1,1)==1);
+    assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,6,1,1)==2);
+    assert(s.finished && sink.last[0]==0xa0u);
+
+    /* TIE=0 ignores that IRQ and transfers the following CNT payload. */
+    ps2_dma_chain_reset(&s,0x100);
+    sink.calls=0;
     assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,7,1,0)==1);
+    assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,7,1,0)==1);
+    assert(sink.last[0]==0xc0u);
     assert(ps2_dma_chain_step(&s,&bus,endpoint,&sink,7,1,0)==2);
-    assert(s.finished);
     puts("OK: DMA chain tags, CALL/RET, REF and IRQ/TIE boundary tests.");
     return 0;
 }

@@ -118,14 +118,21 @@ toolchain-check:
 # Gera um título XEX para o kernel retail usado em consoles RGH/JTAG.
 # O ELF é intermediário privado do build e é removido após o empacotamento.
 xex: check toolchain-check
-	$(MAKE) -C "$(XSDK_DIR)" TOOLCHAIN="$(XSDK_TOOLCHAIN)/bin/powerpc-xsdk-elf-" build/libxsdk.a
-	cmake -S xex -B $(BUILD_DIR)/xex -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_TOOLCHAIN_FILE="$(XSDK_DIR)/cmake/xsdk.cmake" -DXSDK_TOOLCHAIN="$(XSDK_TOOLCHAIN)"
-	cmake --build $(BUILD_DIR)/xex
-	mkdir -p $(BUILD_DIR)
-	cp $(BUILD_DIR)/xex/default.xex $(BUILD_DIR)/default.xex
-	rm -f $(BUILD_DIR)/xex/default
-	@test -s $(BUILD_DIR)/default.xex
-	@echo "OK: build/default.xex gerado pelo xsdk; ELF intermediário removido."
+	@set -eu; \
+	elf="$(BUILD_DIR)/xex/default"; \
+	xex="$(BUILD_DIR)/xex/default.xex"; \
+	trap 'rm -f "$elf"' EXIT HUP INT TERM; \
+	rm -f "$(BUILD_DIR)/default.xex" "$elf" "$xex"; \
+	$(MAKE) -C "$(XSDK_DIR)" TOOLCHAIN="$(XSDK_TOOLCHAIN)/bin/powerpc-xsdk-elf-" build/libxsdk.a; \
+	cmake -S xex -B $(BUILD_DIR)/xex -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_TOOLCHAIN_FILE="$(XSDK_DIR)/cmake/xsdk.cmake" -DXSDK_TOOLCHAIN="$(XSDK_TOOLCHAIN)"; \
+	cmake --build $(BUILD_DIR)/xex; \
+	test -s "$xex"; \
+	test "$(head -c 4 "$xex")" = "XEX2"; \
+	cp "$xex" "$(BUILD_DIR)/default.xex"; \
+	rm -f "$elf"; \
+	trap - EXIT HUP INT TERM; \
+	test -s "$(BUILD_DIR)/default.xex"; \
+	echo "OK: build/default.xex gerado e cabeçalho XEX2 validado; ELF intermediário removido."
 
 clean:
 	rm -rf $(BUILD_DIR)

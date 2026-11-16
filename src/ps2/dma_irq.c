@@ -37,6 +37,15 @@ int ps2_dma_irq_pending(const ps2_dma_controller_t *dma,unsigned bank)
     masks=(dma->dicr[bank]>>8)&(bank==0u?UINT32_C(0x7f):UINT32_C(0x7));
     return (dma->dicr[bank]&DICR_MASTER_ENABLE)!=0u && (flags&masks)!=0u;
 }
+void ps2_dma_sync_irq(const ps2_dma_controller_t *dma, struct ps2_ee_state *ee)
+{
+    unsigned pending;
+    if (dma == 0 || ee == 0) return;
+    pending = ps2_dma_irq_pending(dma, 0u) || ps2_dma_irq_pending(dma, 1u);
+    if (pending) ee->cause |= UINT32_C(1) << 10;
+    else ee->cause &= ~(UINT32_C(1) << 10);
+}
+
 int ps2_dma_complete_channel(ps2_dma_controller_t *dma,unsigned channel,
                              struct ps2_ee_state *ee)
 {
@@ -44,9 +53,8 @@ int ps2_dma_complete_channel(ps2_dma_controller_t *dma,unsigned channel,
     if(dma==0 || channel>=PS2_DMA_CHANNEL_COUNT)return -1;
     bank=bank_for(channel); local=local_for(channel); flag=UINT32_C(1)<<(16u+local);
     dma->dicr[bank]|=flag;
-    if(ps2_dma_irq_pending(dma,bank)) {
-        if(ee!=0) ee->cause |= UINT32_C(1)<<10; /* EE external interrupt line IP2. */
-        dma->dicr[bank]|=DICR_MASTER_FLAG;
-    } else dma->dicr[bank]&=~DICR_MASTER_FLAG;
+    if(ps2_dma_irq_pending(dma,bank)) dma->dicr[bank]|=DICR_MASTER_FLAG;
+    else dma->dicr[bank]&=~DICR_MASTER_FLAG;
+    ps2_dma_sync_irq(dma, ee);
     return 0;
 }

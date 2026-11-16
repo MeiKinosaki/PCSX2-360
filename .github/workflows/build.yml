@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: pcsx2-360-xex-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   host-validation:
     runs-on: ubuntu-latest

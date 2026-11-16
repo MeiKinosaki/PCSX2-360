@@ -2,8 +2,10 @@ CC ?= cc
 CFLAGS ?= -std=c11 -Wall -Wextra -Werror -pedantic -O2
 BUILD_DIR := build
 XENON_CC ?= xenon-gcc
-ELF2XEX ?= elf2xex
-XENON_CFLAGS ?= -O2 -Wall -Wextra
+DEVKITXENON ?= /usr/local/xenon
+ELF2XEX ?= xenon-elf2xex
+XENON_CFLAGS ?= -mcpu=cell -mtune=cell -m32 -fno-pic -mpowerpc64 -O2 -Wall -Wextra -I$(DEVKITXENON)/usr/include
+XENON_LDFLAGS ?= $(DEVKITXENON)/usr/lib/libxenon.a -L$(DEVKITXENON)/xenon/lib/32 -T$(DEVKITXENON)/app.lds -u read -u _start -u exc_base -L$(DEVKITXENON)/usr/lib
 
 EE_SOURCES := src/ps2/dma.c src/ps2/dma_irq.c src/ps2/device_fifo.c src/ps2/iop.c src/ps2/scheduler.c src/ps2/dma_chain.c src/ps2/dma_endpoints.c src/ps2/ee_bus.c src/ps2/ee_state.c src/ps2/ee_ops.c src/ps2/ee_immediate.c \
               src/ps2/ee_compare.c src/ps2/ee_decode.c src/ps2/ee_memory.c \
@@ -110,7 +112,9 @@ check: validate test-host
 toolchain-check:
 	@command -v $(XENON_CC) >/dev/null 2>&1 || { echo "ERRO: $(XENON_CC) ausente."; exit 2; }
 	@command -v $(ELF2XEX) >/dev/null 2>&1 || { echo "ERRO: $(ELF2XEX) ausente."; exit 2; }
-	@echo "OK: ferramentas Xenon encontradas."
+	@test -s "$(DEVKITXENON)/app.lds" || { echo "ERRO: app.lds ausente em $(DEVKITXENON)."; exit 2; }
+	@test -s "$(DEVKITXENON)/usr/lib/libxenon.a" || { echo "ERRO: libxenon.a ausente em $(DEVKITXENON)/usr/lib."; exit 2; }
+	@echo "OK: xenon-gcc, xenon-elf2xex e arquivos de link libXenon encontrados."
 
 # O ELF existe apenas durante a conversão; sucesso ou falha não o deixa como artefato.
 $(BUILD_DIR)/default.xex: src/main.c $(EE_SOURCES) | $(BUILD_DIR)
@@ -120,7 +124,7 @@ $(BUILD_DIR)/default.xex: src/main.c $(EE_SOURCES) | $(BUILD_DIR)
 	xex_tmp="$@.tmp"; \
 	trap 'rm -f "$$elf" "$$xex_tmp"' EXIT HUP INT TERM; \
 	rm -f "$$elf" "$$xex_tmp" "$@"; \
-	$(XENON_CC) $(XENON_CFLAGS) -Isrc/ps2 src/main.c $(EE_SOURCES) -o "$$elf"; \
+	$(XENON_CC) $(XENON_CFLAGS) -Isrc/ps2 src/main.c $(EE_SOURCES) $(XENON_LDFLAGS) -o "$elf"; \
 	test -s "$$elf"; \
 	$(ELF2XEX) "$$elf" "$$xex_tmp"; \
 	test -s "$$xex_tmp"; \

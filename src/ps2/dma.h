@@ -36,6 +36,8 @@ int ps2_dma_write_dicr(ps2_dma_controller_t *dma, unsigned bank, uint32_t value)
 int ps2_dma_complete_channel(ps2_dma_controller_t *dma, unsigned channel,
                              struct ps2_ee_state *ee);
 int ps2_dma_irq_pending(const ps2_dma_controller_t *dma, unsigned bank);
+/* Recompute the EE DMAC interrupt line from both DICR banks. */
+void ps2_dma_sync_irq(const ps2_dma_controller_t *dma, struct ps2_ee_state *ee);
 int ps2_dma_step(ps2_dma_controller_t *dma, unsigned channel,
                  ps2_dma_qword_transfer_fn transfer, void *opaque);
 /* Copies one QWC between EE RAM and a device callback. DIR=1 sends RAM to

@@ -24,10 +24,12 @@ Este documento separa o que já existe no repositório do que ainda impede uma b
 
 ## Xbox 360 / XEX
 - `src/main.c` ainda é um bootstrap de demonstração e não inicializa vídeo, áudio, controles, armazenamento ou rede.
-- O alvo `make xex` requer `xenon-gcc`, `libxenon.a`, `app.lds` e `xenon-elf2xex`.
-- O workflow de XEX dispara automaticamente em pushes para `main`, mas depende de runner self-hosted com labels `linux,xenon,xex-packer`.
-- A imagem pública `free60/libxenon` documenta a toolchain e bibliotecas, mas não inclui um conversor ELF→XEX. O conversor precisa ser provisionado e validado separadamente; não foi substituído por um empacotador de outro ABI/linker.
-- Não há evidência de runner com esses labels, de conversor compatível instalado, de execução do job ou de artefato `build/default.xex`.
+- O alvo `make xex` está configurado para chamar `xenon-elf2xex`, mas esse executável não foi localizado na distribuição/documentação consultada do Free60 libXenon; portanto, o nome configurado ainda é uma dependência não comprovada.
+- O workflow dispara em pushes para `main`, mas a execução nº 314 (`43868926608`) permanece `queued`; ambos os jobs aguardam e não há artefatos. O job XEX pede runner self-hosted com labels `linux,xenon,xex-packer`.
+- A imagem pública `free60/libxenon` fornece toolchain e bibliotecas, mas não documenta um conversor ELF→XEX.
+- Foi auditado como candidato o `Team-Resurgent/RXDK360/tools/elf2xex.py` (commit `470c84322f5dda0f3b47ac7b047a0cfce1330d95`). O script lê ELF PPC big-endian ELF32/ELF64 e produz XEX2 no fluxo RXDK; a documentação demonstra testes no Xenia. Isso não prova compatibilidade com o ELF/linker/runtime bare-metal libXenon nem execução no console. Não integrar nem chamar esse packer como solução libXenon sem teste de compatibilidade e validação de boot.
+- A libXenon é uma biblioteca homebrew bare-metal; empacotar seu ELF em um contêiner XEX não converte automaticamente seu runtime/ABI para o modelo de título retail-kernel. Para um XEX de dashboard/retail kernel, o bootstrap/runtime precisa ser portado para um SDK/ABI de título XEX (por exemplo, um fluxo RXDK/XSDK), não apenas empacotado.
+- Não há evidência de runner com esses labels, conversor compatível instalado, execução do job ou artefato `build/default.xex`.
 - Um ELF intermediário não é o produto final; o requisito de entrega é `build/default.xex` validado.
 
 ## Ordem de resolução
@@ -36,6 +38,6 @@ Este documento separa o que já existe no repositório do que ainda impede uma b
 3. Completar o caminho de execução do EE e depois implementar IOP/DMA/VU/GIF/GS/SPU2/CDVD.
 4. Implementar scanner e persistência da biblioteca.
 5. Criar runtime Xbox 360 (vídeo, áudio, input, armazenamento e rede).
-6. Provisionar runner Xenon com empacotador ELF→XEX compatível, executar o job automático, gerar `build/default.xex`, inspecionar o artefato e testar em console RGH/JTAG.
+6. Escolher e portar o bootstrap para um runtime/ABI de título XEX compatível (sem presumir que libXenon bare-metal seja intercambiável); depois provisionar runner/SDK/packer, gerar `build/default.xex`, inspecionar e validar em Xenia e console RGH/JTAG.
 
 Nenhum item dependente de CI, toolchain, runner ou console é considerado concluído sem evidência correspondente.

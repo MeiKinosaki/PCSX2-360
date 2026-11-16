@@ -25,6 +25,13 @@ int main(void)
     assert((dma.dicr[1]&(1u<<18))!=0u);
     assert((dma.dicr[1]&(1u<<31))!=0u);
     assert((ee.cause&(1u<<10))!=0u);
+    /* Clearing bank 0 must not hide an outstanding bank 1 interrupt. */
+    assert(ps2_dma_write_dicr(&dma,0u,1u<<16)==0);
+    ps2_dma_sync_irq(&dma,&ee);
+    assert((ee.cause&(1u<<10))!=0u);
+    assert(ps2_dma_write_dicr(&dma,1u,1u<<18)==0);
+    /* The EE IP2 line is shared; DICR clearing alone does not deassert it. */
+    assert((ee.cause&(1u<<10))!=0u);
     assert(ps2_dma_write_dicr(&dma,2u,0u)==-1);
     assert(ps2_dma_set_channel_priority(&dma,10u,1u,1)==-1);
     puts("OK: experimental DPCR/DICR and EE CP0 IP2 interrupt tests.");

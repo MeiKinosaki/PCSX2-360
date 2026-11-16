@@ -40,7 +40,7 @@ O executável final obrigatório é **`build/default.xex`**. O arquivo ELF, quan
 - [x] Caminho experimental unificado de fetch/load/store com TLB arquitetural: `ps2_ee_step_arch_tlb` traduz fetch e delega loads/stores ao executor arquitetural; testes cobrem aliases KSEG0, fetch/load/store, TLB miss, entrada inválida durante delay slot, LW desalinhado (ADEL), SW desalinhado (ADES), BadVAddr e preservação da RAM. Nova regressão cobre SB/SH/SW/SD e LB/LBU/LH/LHU/LW/LWU/LD, incluindo extensão de sinal/zero. Execução CI dessas regressões ainda pendente; auditoria diferencial R5900 e instruções restantes continuam abertas.
 - [x] Modelo inicial de biblioteca de jogos: cadastro limitado, proteção contra serial duplicado, favoritos e filtros por título/serial/gênero.
 - [x] Snapshot portátil experimental da biblioteca: formato versionado, campos em ordem fixa little-endian, checksum, validação de tamanho/strings/favoritos/seriais duplicados e validação antes de modificar o destino; regressões de round-trip e corrupção adicionadas (CI pendente).
-- [ ] Toolchain Xenon configurada e `default.xex` compilado.
+- [ ] Toolchain XSDK configurada e `default.xex` compilado (workflow automático em andamento; build/artefato ainda não confirmados).
 - [x] Barramento físico experimental EE: RAM principal de 32 MiB e Scratchpad de 16 KiB em `0x70000000`, com rejeição de endereços fora das regiões suportadas; não é ainda um mapa completo de registradores MMIO.
 - [x] DMA EE experimental em modo normal integrada ao barramento físico `ps2_ee_bus_t`: `ps2_dma_step_bus` e `ps2_dma_fabric_step_bus` transferem QWC entre RAM principal/Scratchpad e callbacks de dispositivo. Teste específico cobre RAM e Scratchpad. Não implementa aliases/cache/MMIO completos.
 - [x] Fabric experimental de endpoints por canal para VIF0, VIF1, GIF, IPU, SIF0/1/2 e SPR; serviço round-robin de um QWC por chamada e eventos de conclusão por canal. Callback de dispositivo ainda é interface genérica, sem FIFOs reais. Não implementa prioridades DPCR, registradores DICR nem IRQ ligada ao CP0.
@@ -49,7 +49,7 @@ O executável final obrigatório é **`build/default.xex`**. O arquivo ELF, quan
 - [ ] Inicialização comprovada em Xbox 360 RGH/JTAG.
 - [ ] Emulação de jogos PS2.
 
-**Importante:** os módulos EE importados são protótipos experimentais. O bootstrap atual não inicializa o hardware do Xbox 360 nem inicia jogos PS2. Não há ainda um `default.xex` compilado ou testado.
+**Importante:** os módulos EE importados são protótipos experimentais. O bootstrap atual não inicializa o hardware do Xbox 360 nem inicia jogos PS2. Mesmo após gerar o primeiro `default.xex`, ainda será necessário validar inicialização e integrar a máquina PS2 real.
 
 ## Módulos EE importados
 
@@ -72,7 +72,7 @@ make xex
 
 Saída esperada: `build/default.xex`.
 
-O job de XEX é acionado automaticamente em pushes para `main` usando `ubuntu-latest`; baixa o XSDK no commit fixado, constrói sua toolchain e runtime e empacota o ELF PPC32 com o packer do próprio XSDK. A execução nº 319 ainda está `queued`. `build/default.xex` não está confirmado como artefato existente até o job terminar e o upload ser verificado.
+O job de XEX é acionado automaticamente em pushes para `main` usando `ubuntu-latest`; baixa o XSDK no commit fixado, constrói sua toolchain e runtime e empacota o ELF PPC32 com o packer do próprio XSDK. O alvo `make xex` apaga resultados antigos antes de compilar, valida o cabeçalho `XEX2` e remove o ELF intermediário inclusive quando o empacotamento falha. A concorrência do workflow cancela execuções antigas da mesma branch para evitar uma fila de builds obsoletas. A geração de `build/default.xex` só será confirmada quando o job terminar e o upload for verificado.
 
 ## Próximas etapas
 

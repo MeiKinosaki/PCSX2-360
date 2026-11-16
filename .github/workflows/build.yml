@@ -1,4 +1,4 @@
-name: PCSX2-360 validation and XEX build
+name: PCSX2-360 validation and automatic XEX build
 
 on:
   push:
@@ -20,19 +20,36 @@ jobs:
         run: make check
 
   xenon-default-xex:
-    # Configure a self-hosted runner with libXenon and elf2xex.
-    # Do not replace with ubuntu-latest unless the toolchain is actually provisioned.
-    if: github.event_name == 'workflow_dispatch'
-    runs-on: [self-hosted, linux, xenon]
+    # Build automatically on pushes to main and manual dispatch.
+    # The official container is expected to supply the libXenon SDK and converter.
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    container:
+      image: free60/libxenon:latest
+    env:
+      DEVKITXENON: /usr/local/xenon
     steps:
       - uses: actions/checkout@v4
-      - name: Build final Xbox 360 executable
+      - name: Add libXenon tools to PATH
+        run: |
+          echo "$DEVKITXENON/bin" >> "$GITHUB_PATH"
+          echo "$DEVKITXENON/usr/bin" >> "$GITHUB_PATH"
+      - name: Verify Xenon compiler, linker inputs and XEX converter
+        run: |
+          set -euo pipefail
+          command -v xenon-gcc
+          command -v xenon-elf2xex
+          test -s "$DEVKITXENON/app.lds"
+          test -s "$DEVKITXENON/usr/lib/libxenon.a"
+      - name: Run host regressions and generate default.xex
         run: |
           set -euo pipefail
           make clean
           make check
           make xex
           test -s build/default.xex
+          ! test -e build/pcsx2-360.elf.tmp
+          ! test -e build/default.xex.tmp
           sha256sum build/default.xex > build/default.xex.sha256
       - uses: actions/upload-artifact@v4
         with:

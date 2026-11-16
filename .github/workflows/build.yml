@@ -49,7 +49,7 @@ jobs:
       - name: Build pinned PowerPC XSDK toolchain
         run: |
           set -euo pipefail
-          PREFIX="$HOME/xsdk-gcc" WORK="$HOME/xsdk-gcc-work" JOBS=2 xsdk/tools/toolchain/build.sh
+          PREFIX="$HOME/xsdk-gcc" WORK="$HOME/xsdk-gcc-work" JOBS=2 bash xsdk/tools/toolchain/build.sh
           "$HOME/xsdk-gcc/bin/powerpc-xsdk-elf-gcc" --version
       - name: Build XSDK retail-kernel runtime
         run: |

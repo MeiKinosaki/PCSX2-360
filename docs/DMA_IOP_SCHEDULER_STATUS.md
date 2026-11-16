@@ -62,3 +62,12 @@ The Xenon XEX job remains manual and requires a provisioned self-hosted runner l
 - Scheduler regression now checks that a DMA channel disabled in DPCR remains started but performs no transfer and raises no completion interrupt.
 - A physical EE bus access fault is injected through an out-of-range MADR; the expected contract is an error return, CHCR.STR cleared by the fabric, no completion-pending event, and no EE IP2 completion interrupt.
 - These are regression expectations added to source; execution and CI approval are still pending.
+
+
+## EE DMAC interrupt-line follow-up
+
+- Added a helper that checks both DICR banks and asserts EE Cause.IP2 when either bank requests service.
+- Scheduler ticks re-evaluate the DMA request after servicing completion events.
+- Regression covers simultaneous pending requests across both banks and verifies that clearing one bank does not mask the other.
+- IP2 is shared by multiple EE interrupt sources. The DMA helper deliberately does not clear Cause.IP2 when DICR flags are acknowledged; deassertion must be handled by a future aggregated EE interrupt-controller model. Direct DICR writes also still need to be routed through that model.
+- Source and regression changes are committed; CI and hardware validation remain pending.

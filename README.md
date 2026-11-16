@@ -2,9 +2,9 @@
 
 Projeto experimental de emulação de PlayStation 2 para Xbox 360 RGH/JTAG.
 
-**Versão de desenvolvimento: v0.4.6b — em andamento (validação do DMA com RAM EE pendente).**
+**Versão de desenvolvimento: v0.4.7b — etapa de empacotamento XEX em preparação.**
 
-**Progresso global estimado: 32%.** Marco v0.4b: serialização portátil little-endian v2 do estado EE, TLB de 48 entradas e RAM, com checksum e validação antes da restauração; o tamanho do registro TLB foi corrigido para 25 bytes e a validação de terminadores NUL da biblioteca foi corrigida. As duas alterações foram relidas no GitHub, mas ainda aguardam execução confirmada no CI. O avanço não representa uma máquina PS2 completa. Marco anterior v0.3b: integração experimental de CP0/TLB e PageMask variável; CP0.Context, BadVAddr, Context.BadVPN2 e EntryHi.VPN2 nas exceções TLB; distinção entre TLB miss e entrada inválida; rastreamento do branch proprietário do delay slot, EPC/Cause.BD em exceções e retomada no destino do desvio. A regressão host `make check` foi aprovada no GitHub Actions para o commit `a70db3a1bc87694124747736eba7bc63e1fbaa4a` (run `43644957989`). O resultado valida apenas os testes host incluídos, não a precisão integral do R5900 nem a compatibilidade com jogos.
+**Progresso global estimado: 33%.** Marco v0.4.7b: alvo `make xex` endurecido para manter o ELF apenas como arquivo temporário, removendo ELF/XEX temporários em caso de falha e removendo o ELF após conversão bem-sucedida. Alteração registrada no commit `7602b4a2fb23005e4dec8e58190b0c4b31014b45`. Isso conclui uma melhoria do fluxo de empacotamento no código, mas não comprova a disponibilidade do conversor, compilação Xenon, geração de `default.xex` nem execução no console. Marco v0.4b: serialização portátil little-endian v2 do estado EE, TLB de 48 entradas e RAM, com checksum e validação antes da restauração; o tamanho do registro TLB foi corrigido para 25 bytes e a validação de terminadores NUL da biblioteca foi corrigida. As duas alterações foram relidas no GitHub, mas ainda aguardam execução confirmada no CI. O avanço não representa uma máquina PS2 completa. Marco anterior v0.3b: integração experimental de CP0/TLB e PageMask variável; CP0.Context, BadVAddr, Context.BadVPN2 e EntryHi.VPN2 nas exceções TLB; distinção entre TLB miss e entrada inválida; rastreamento do branch proprietário do delay slot, EPC/Cause.BD em exceções e retomada no destino do desvio. A regressão host `make check` foi aprovada no GitHub Actions para o commit `a70db3a1bc87694124747736eba7bc63e1fbaa4a` (run `43644957989`). O resultado valida apenas os testes host incluídos, não a precisão integral do R5900 nem a compatibilidade com jogos.
 
 
 ## Objetivo do build
@@ -63,7 +63,7 @@ Validação nativa:
 make check
 ```
 
-Build final para Xbox 360, em runner que tenha `xenon-gcc` e `elf2xex`:
+Build final para Xbox 360, em runner com compilador Xenon/libXenon e conversor compatível com a interface `elf2xex entrada.elf saida.xex`:
 
 ```sh
 make clean
@@ -72,7 +72,7 @@ make xex
 
 Saída esperada: `build/default.xex`.
 
-O job Xenon do GitHub Actions usa runner self-hosted com labels `linux` e `xenon`; um runner Ubuntu hospedado comum não inclui libXenon automaticamente.
+O job Xenon do GitHub Actions ainda depende de runner self-hosted com labels `linux` e `xenon`. A etapa de conversão ainda precisa ser provisionada e validada na nuvem; `build/default.xex` não está confirmado como artefato existente.
 
 ## Próximas etapas
 

@@ -20,28 +20,22 @@ jobs:
         run: make check
 
   xenon-default-xex:
-    # Build automatically on pushes to main and manual dispatch.
-    # The official container is expected to supply the libXenon SDK and converter.
+    # This runner must have libXenon AND a verified Xenon ELF-to-XEX packer.
+    # It starts automatically on pushes once the runner is registered with these labels.
     if: github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
-    container:
-      image: free60/libxenon:latest
-    env:
-      DEVKITXENON: /usr/local/xenon
+    runs-on: [self-hosted, linux, xenon, xex-packer]
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
-      - name: Add libXenon tools to PATH
-        run: |
-          echo "$DEVKITXENON/bin" >> "$GITHUB_PATH"
-          echo "$DEVKITXENON/usr/bin" >> "$GITHUB_PATH"
-      - name: Verify Xenon compiler, linker inputs and XEX converter
+      - name: Verify Xenon toolchain and XEX packer
         run: |
           set -euo pipefail
           command -v xenon-gcc
           command -v xenon-elf2xex
+          test -n "${DEVKITXENON:-}"
           test -s "$DEVKITXENON/app.lds"
           test -s "$DEVKITXENON/usr/lib/libxenon.a"
-      - name: Run host regressions and generate default.xex
+      - name: Run regressions and generate final XEX
         run: |
           set -euo pipefail
           make clean

@@ -47,3 +47,11 @@ The Xenon XEX job remains manual and requires a provisioned self-hosted runner l
 - Regression tests cover both enabled and disabled TIE behavior.
 - Chain execution errors now clear CHCR.STR and release the per-channel chain state rather than leaving a channel permanently started.
 - These changes are source-level changes only until the GitHub Actions host test job succeeds; exact DMAC IRQ timing still needs hardware/differential validation.
+
+
+## DPCR arbitration follow-up
+
+- The DMA fabric now selects among runnable, enabled channels using the DPCR priority field instead of round-robin arbitration.
+- Lower numeric priority values are selected first; equal-priority channels are resolved in favor of the higher channel number.
+- The DMA bus regression now covers distinct priorities and equal-priority tie-breaking.
+- This is source-level behavior and a regression specification; it is not yet CI-validated or hardware-verified.

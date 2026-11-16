@@ -39,11 +39,11 @@ int ps2_dma_irq_pending(const ps2_dma_controller_t *dma,unsigned bank)
 }
 void ps2_dma_sync_irq(const ps2_dma_controller_t *dma, struct ps2_ee_state *ee)
 {
-    unsigned pending;
     if (dma == 0 || ee == 0) return;
-    pending = ps2_dma_irq_pending(dma, 0u) || ps2_dma_irq_pending(dma, 1u);
-    if (pending) ee->cause |= UINT32_C(1) << 10;
-    else ee->cause &= ~(UINT32_C(1) << 10);
+    /* IP2 is shared by EE external interrupt sources; only assert here.
+       Deassertion belongs to the aggregated interrupt-controller model. */
+    if (ps2_dma_irq_pending(dma, 0u) || ps2_dma_irq_pending(dma, 1u))
+        ee->cause |= UINT32_C(1) << 10;
 }
 
 int ps2_dma_complete_channel(ps2_dma_controller_t *dma,unsigned channel,

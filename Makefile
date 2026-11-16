@@ -112,18 +112,23 @@ toolchain-check:
 	@command -v $(ELF2XEX) >/dev/null 2>&1 || { echo "ERRO: $(ELF2XEX) ausente."; exit 2; }
 	@echo "OK: ferramentas Xenon encontradas."
 
-# ELF é somente intermediário temporário. O único executável entregue é default.xex.
+# O ELF existe apenas durante a conversão; sucesso ou falha não o deixa como artefato.
 $(BUILD_DIR)/default.xex: src/main.c $(EE_SOURCES) | $(BUILD_DIR)
 	$(MAKE) toolchain-check
-	@rm -f $(BUILD_DIR)/pcsx2-360.elf.tmp $@.tmp
-	$(XENON_CC) $(XENON_CFLAGS) -Isrc/ps2 src/main.c $(EE_SOURCES) -o $(BUILD_DIR)/pcsx2-360.elf.tmp
-	@test -s $(BUILD_DIR)/pcsx2-360.elf.tmp
-	$(ELF2XEX) $(BUILD_DIR)/pcsx2-360.elf.tmp $@.tmp
-	@test -s $@.tmp
-	@mv $@.tmp $@
-	@rm -f $(BUILD_DIR)/pcsx2-360.elf.tmp
-	@test -s $@
-	@echo "OK: build/default.xex gerado."
+	@set -eu; \
+	elf="$(BUILD_DIR)/pcsx2-360.elf.tmp"; \
+	xex_tmp="$@.tmp"; \
+	trap 'rm -f "$$elf" "$$xex_tmp"' EXIT HUP INT TERM; \
+	rm -f "$$elf" "$$xex_tmp" "$@"; \
+	$(XENON_CC) $(XENON_CFLAGS) -Isrc/ps2 src/main.c $(EE_SOURCES) -o "$$elf"; \
+	test -s "$$elf"; \
+	$(ELF2XEX) "$$elf" "$$xex_tmp"; \
+	test -s "$$xex_tmp"; \
+	mv "$$xex_tmp" "$@"; \
+	rm -f "$$elf"; \
+	trap - EXIT HUP INT TERM; \
+	test -s "$@"; \
+	echo "OK: build/default.xex gerado; ELF intermediário removido."
 
 xex: $(BUILD_DIR)/default.xex
 

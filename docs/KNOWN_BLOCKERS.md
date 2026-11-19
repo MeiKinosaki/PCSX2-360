@@ -13,7 +13,7 @@ Este documento separa o que já existe no repositório do que ainda impede uma b
 - A auditoria diferencial de exceções, PageMask, PFN, delay slots e semântica específica do R5900 continua aberta.
 - Existe um scaffold inicial dos 10 canais DMA EE (CHCR/MADR/QWC/TADR) e teste de registradores; ainda não há motor de transferência, chain mode, arbitragem, integração com dispositivos, scheduler ou interrupções DMA.
 - IOP, DMA, VU0/VU1, VIF, GIF, GS, SPU2 e CDVD ainda não formam uma máquina PS2 executável.
-- O snapshot EE + TLB + RAM agora usa serialização campo a campo little-endian, versão 2 e checksum; o carregamento valida o TLB antes de alterar CPU/RAM. A implementação e os testes ainda aguardam execução confirmada no CI. O formato exige RAM de mesmo tamanho e ainda não inclui IOP/DMA/VU/GS nem persistência integrada ao runtime.
+- O snapshot EE + TLB + RAM usa serialização campo a campo little-endian, versão 2 e checksum; o carregamento valida o TLB antes de alterar CPU/RAM. A execução nº 328 falhou no teste de round-trip: a fixture EntryHi `0x0012302a` continha bits reservados 12:8 ligados e o teste esperava preservá-los. A fixture foi corrigida para `0x0012202a` no commit `f0b4510b3d09946e7f82cd9e3713765047afb81c`; a nova aprovação CI ainda não foi confirmada. O formato exige RAM de mesmo tamanho e ainda não inclui IOP/DMA/VU/GS nem persistência integrada ao runtime.
 
 ## Biblioteca e interface
 - Existe apenas o modelo de dados da biblioteca; ainda não há scanner real de ISO/CSO/CHD nem leitura de USB/HDD.
@@ -26,7 +26,7 @@ Este documento separa o que já existe no repositório do que ainda impede uma b
 - `src/main.c` ainda é um bootstrap de demonstração e não inicializa vídeo, áudio, controles, armazenamento ou rede.
 - O fluxo foi migrado para o XSDK `xenosworks/xsdk` no commit `ade2c81d914634834d77394c5d9f8c4575f395bc`, que documenta toolchain PowerPC própria, runtime para retail kernel e packer ELF→XEX2.
 - O Makefile compila o título com o toolchain `powerpc-xsdk-elf`, liga `libxsdk.a` e usa o script `xsdk/tools/elf2xex.py`; o ELF é apagado depois de copiar `build/default.xex`.
-- Workflow automático usa `ubuntu-latest` e constrói toolchain e runtime na nuvem. Execução nº 319 (`43869392104`) foi criada, mas permanece `queued`; ainda não há resultado de compilação ou artefato.
+- Workflow automático usa `ubuntu-latest` e constrói toolchain e runtime na nuvem. A execução nº 328 falhou antes de chamar `make xex`, pois `make check` abortou na regressão de snapshot EE/TLB. A fixture de EntryHi foi corrigida no commit `f0b4510b3d09946e7f82cd9e3713765047afb81c`; ainda não há resultado CI posterior nem artefato.
 - O empacotador XSDK é documentado para títulos do retail kernel e consoles RGH/JTAG, mas o primeiro XEX do PCSX2-360 ainda precisa passar pelo CI e depois por teste de boot em hardware. Não confundir geração do contêiner XEX com funcionalidade do emulador PS2.
 - O `src/main.c` continua bootstrap mínimo; mesmo um `default.xex` gerado nesta fase não executará jogos PS2.
 - Um ELF intermediário não é o produto final; o requisito de entrega é `build/default.xex` validado.

@@ -1284,7 +1284,7 @@ int main(void)
       ps2_ee_tlb_arch_t saved_tlb, loaded_tlb;
       uint8_t machine_blob[16u + PS2_EE_SNAPSHOT_PAYLOAD_SIZE + 1u + 48u * 25u + 4u + sizeof(ram)];
       size_t blob_size = 0u;
-      uint32_t eh = UINT32_C(0x0012302a);
+      uint32_t eh = UINT32_C(0x0012202a); /* EntryHi bits 12:8 are reserved. */
       ps2_ee_reset(&saved);
       ps2_ee_tlb_arch_reset(&saved_tlb);
       assert(ps2_ee_tlb_arch_write_indexed(&saved_tlb, 3u, eh,

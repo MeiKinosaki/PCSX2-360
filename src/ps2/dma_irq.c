@@ -1,7 +1,7 @@
 #include "dma.h"
 #include "ee_state.h"
 #include <stddef.h>
-#define DICR_MASTER_ENABLE (UINT32_C(1)<<24)
+#define DICR_MASTER_ENABLE (UINT32_C(1)<<23)
 #define DICR_MASTER_FLAG (UINT32_C(1)<<31)
 static unsigned bank_for(unsigned channel){return channel<7u?0u:1u;}
 static unsigned local_for(unsigned channel){return channel<7u?channel:channel-7u;}

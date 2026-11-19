@@ -14,7 +14,7 @@ This milestone adds executable host-side scaffolding; it is not a complete PS2 D
 ## DPCR / DICR and CP0
 
 - Experimental DPCR channel priority/enable nibble accessors.
-- DICR completion flags, masks, master enable and write-one-to-clear behavior for two register banks.
+- DICR completion flags, masks, master enable (bit 23) and write-one-to-clear behavior for two register banks.
 - Completed DMA channels can assert EE Cause.IP2 (bit 10).
 - Scheduler consumes fabric completion events and routes them through the interrupt helper.
 - Register bit timing, channel/bank mapping, master-flag behavior and real EE interrupt controller routing still require differential verification.

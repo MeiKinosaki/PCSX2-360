@@ -11,7 +11,7 @@ int main(void)
     assert((dma.dpcr[0]&0xfu)==0xbu);
     assert(ps2_dma_set_channel_priority(&dma,9u,5u,1)==0);
     assert((dma.dpcr[1]&0x00000f00u)==0x00000d00u); /* Channel 9 occupies DPCR1 nibble 2. */
-    assert(ps2_dma_write_dicr(&dma,0u,(1u<<24)|(1u<<8))==0);
+    assert(ps2_dma_write_dicr(&dma,0u,(1u<<23)|(1u<<8))==0);
     assert(ps2_dma_complete_channel(&dma,0u,&ee)==0);
     assert((dma.dicr[0]&(1u<<16))!=0u);
     assert((dma.dicr[0]&(1u<<31))!=0u);
